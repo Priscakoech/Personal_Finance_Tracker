@@ -1,6 +1,5 @@
 datetime
 kivy
 kivymd==1.1.1
-kivyauth
 openai
 regex
