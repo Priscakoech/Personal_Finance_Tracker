@@ -1,0 +1,49 @@
+
+[b][size=24dp]Setting Up Your Crypto Wallets[/size][/b]
+
+
+To connect your crypto wallets (Binance, Bybit or MetaMask), follow these steps:
+
+# 1. **Choose Your Wallet**
+     Select the wallet you want to link:
+     Binance, Bybit or MetaMask.
+     Then accompany them with their 
+     respective *Blockchain Network*
+
+# 2. **Enter API Creds + Wallet Address**
+   - You will need your **API Key** and 
+     **API Secret** (Binance & Bybit).
+   - MetaMask doesn't require them.
+
+# 3. **How to Get Your Wallet Creds**
+     *[color=00afff]For Binance & Bybit[/color]*:  
+     • Go to your wallet settings
+     • API Management
+     • Create a new API key
+     • Copy both the API Key and
+       the API Secret.
+
+     *[color=00afff]For MetaMask[/color]*:
+     You only need a wallet address.
+     • Open your MetaMask app
+     • Tap your account name
+     • Your public address will be 
+       copied automatically. 
+       *(it starts with "0x...")*
+
+# 4. **Security Reminder**
+   - **Keep your API keys private**.
+     Never share them with anyone.
+   - Only grant "read-only" permissions 
+     when creating your API keys
+     (no withdrawal access).
+   - To further secure your wallets, the
+     API Creds you are providing are 
+     encrypted and stored locally on
+     your device.
+
+# 5. **Save and Connect**
+     Pate your API Creds or Wallet Address,
+     then tap **Link Wallet**. Once connected,
+     your wallet transactions will start
+     syncing automatically.

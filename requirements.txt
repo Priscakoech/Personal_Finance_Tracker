@@ -1,5 +1,16 @@
-datetime
 kivy
 kivymd==1.1.1
+akivymd
+kivymd-extensions
+kivymd-extensions.akivymd
+asynckivy
+asyncgui
+certifi
+requests
 openai
 regex
+datetime
+python-calendar
+plyer
+pyjnius
+android
