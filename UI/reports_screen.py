@@ -1,6 +1,9 @@
+
+from kivy.app import App
+from kivy.utils import platform
 from kivy.lang import Builder
 from kivymd.uix.screen import MDScreen
-from UI.reusables import TopLeftBackButton, HiddenCard, CloseCardButton # noqa
+from UI.reusables import TopLeftBackButton, GridCard, CustomLabel, HiddenCard, HiddenCardReportsContent, DownloadReportButton, CloseCardButton # noqa
 # The "# noqa" comment suppresses the 'UNUSED IMPORTS' Warnings! 🙂🙂
 
 
@@ -9,8 +12,24 @@ KV = """
     name: "reports_screen"
     md_bg_color: app._dark
 
-    TopLeftBackButton:
-        text_color: app._white
+    # Custom Top App Bar
+    MDCard:
+        size_hint: (1, None)
+        height: dp(59)
+        radius: dp(0)
+        pos_hint: {"top": 1}
+        md_bg_color: app._dark
+        padding: dp(17.5)
+
+        MDBoxLayout:
+            md_bg_color: app._lightgray
+            size_hint: (None, None)
+            size: ("34dp", "34dp")
+            pos_hint: {"center_y": .5}
+            radius: self.height / 2
+            line_color: app._blue
+
+            TopLeftBackButton:
 
     Image:
         source: "assets/images/reports_icon.png"
@@ -18,519 +37,257 @@ KV = """
         pos_hint: {"center_x": .5, "center_y": .8}
 
     MDLabel:
-        text: "Download Financial Reports"
-        bold: True
         padding: dp(46)
-        font_style: "H4"
+        text: "Download\\nFinancial Reports"
+        font_size: "36dp"
+        bold: True
         pos_hint: {"center_y": .65}
         halign: "center"
         theme_text_color: "Custom"
-        text_color: app._gray
+        text_color: app._white
 
     # ------------------------- report options --------------------------
-    # ----- daily -----
-    MDCard:
-        md_bg_color: (.6, .6, 1, .1)
-        size_hint: (.4, .18)
-        pos_hint: {"center_x": .275, "center_y": .45}    
-        radius: dp(23)
-        padding: dp(0), dp(20)
-        on_release: app.show_card(app.card_to_show_or_hide("daily_report_card"))
-
-        MDRelativeLayout:
-            orientation: "vertical"
-            
-            Image:
-                source: "assets/images/daily.png"
-                size_hint: (.6, .6)
-                pos_hint: {"center_x": .5, "center_y": .7}
-
-            MDLabel:
-                text: "Daily Report"
-                font_style: "Body1"
-                pos_hint: {"center_y": .15}
-                halign: "center"
-                theme_text_color: "Custom"
-                text_color: app._white
-
-    # ----- weekly -----
-    MDCard:
-        md_bg_color: (.6, .6, 1, .1)
-        size_hint: (.4, .18)
-        pos_hint: {"center_x": .725, "center_y": .45}    
-        radius: dp(23)
-        padding: dp(0), dp(20)
-        on_release: app.show_card(app.card_to_show_or_hide("weekly_report_card"))
-
-        MDRelativeLayout:
-            orientation: "vertical"
-            
-            Image:
-                source: "assets/images/weekly.png"
-                size_hint: (.6, .6)
-                pos_hint: {"center_x": .5, "center_y": .7}
-
-            MDLabel:
-                text: "Weekly Report"
-                font_style: "Body1"
-                pos_hint: {"center_y": .15}
-                halign: "center"
-                theme_text_color: "Custom"
-                text_color: app._white
-
-    # ----- monthly ----- 
-    MDCard:
-        md_bg_color: (.6, .6, 1, .1)
-        size_hint: (.4, .18)
-        pos_hint: {"center_x": .275, "center_y": .24}    
-        radius: dp(23)
-        padding: dp(0), dp(20)
-        on_release: app.show_card(app.card_to_show_or_hide("monthly_report_card"))
-
-        MDRelativeLayout:
-            orientation: "vertical"
-            
-            Image:
-                source: "assets/images/monthly.png"
-                size_hint: (.6, .6)
-                pos_hint: {"center_x": .5, "center_y": .7}
-
-            MDLabel:
-                text: "Monthly Report"
-                font_style: "Body1"
-                pos_hint: {"center_y": .15}
-                halign: "center"
-                theme_text_color: "Custom"
-                text_color: app._white
-
-    # ----- yearly -----
-    MDCard:
-        md_bg_color: (.6, .6, 1, .1)
-        size_hint: (.4, .18)
-        pos_hint: {"center_x": .725, "center_y": .24}    
-        radius: dp(23)
-        padding: dp(0), dp(20)
-        on_release: app.show_card(app.card_to_show_or_hide("yearly_report_card"))
-        
-        MDRelativeLayout:
-            orientation: "vertical"
-            
-            Image:
-                source: "assets/images/yearly.png"
-                size_hint: (.6, .6)
-                pos_hint: {"center_x": .5, "center_y": .7}
-            
-            MDLabel:
-                text: "Yearly Report"
-                font_style: "Body1"
-                pos_hint: {"center_y": .15}
-                halign: "center"
-                theme_text_color: "Custom"
-                text_color: app._white
-                
-    MDCard:
-        md_bg_color: (.6, .6, 1, .1)
-        size_hint: (.85, .09)
-        pos_hint: {"center_x": .5, "center_y": .063}    
-        radius: dp(11.5)
-        padding: dp(11.5)
+    MDBoxLayout:
+        size_hint: (.95, .6)
+        pos_hint: {"center_x": .5, "bottom": 0}
+        padding: dp(6), dp(32), dp(6), dp(17.5)
+        spacing: dp(11.5)
+        orientation: "vertical"
 
         MDBoxLayout:
-            MDIcon:
-                icon: "information"
-                pos_hint: {"center_y": .5}
-                theme_text_color: "Custom"
-                text_color: app._gray
+            padding: dp(6)
+            spacing: dp(23)
+            size_hint: (1, None)
+            height: dp(156)
 
-            MDLabel:
-                text: "The reports are available in [color=00afff][size=16sp].csv[/size][/color] format only."
-                markup: True
-                padding: dp(11.5)
-                size_hint_y: None
+            GridCard:
+                size_hint: (1, 1)
+                icon_path: "assets/images/daily.png"
+                grid_card_txt: "Daily Report"
+                on_release: app.show_card(app.card_to_show_or_hide("daily_report_card"))
+
+            GridCard:
+                size_hint: (1, 1)
+                icon_path: "assets/images/weekly.png"
+                grid_card_txt: "Weekly Report"
+                on_release: app.show_card(app.card_to_show_or_hide("weekly_report_card"))
+
+        MDBoxLayout:
+            padding: dp(6)
+            spacing: dp(23)
+            size_hint: (1, None)
+            height: dp(156)
+
+            GridCard:
+                size_hint: (1, 1)
+                icon_path: "assets/images/monthly.png"
+                grid_card_txt: "Monthly Report"
+                on_release: app.show_card(app.card_to_show_or_hide("monthly_report_card"))
+
+            GridCard:
+                size_hint: (1, 1)
+                icon_path: "assets/images/yearly.png"
+                grid_card_txt: "Yearly Report"
+                on_release: app.show_card(app.card_to_show_or_hide("yearly_report_card"))
+
+        MDBoxLayout:
+            md_bg_color: app._tinted
+            size_hint: (1, None)
+            height: dp(56)
+            padding: dp(8), dp(0), dp(0), dp(0)
+            radius: dp(11.5)
+
+            MDBoxLayout:
+                size_hint: (None, None)
+                size: ("26dp", "23dp")
                 pos_hint: {"center_y": .5}
-                font_style: "Subtitle2"
-                halign: "left"
-                theme_text_color: "Custom"
-                text_color: app._gray
+                MDIcon:
+                    icon: "information"
+                    pos_hint: {"center_y": .5}
+                    theme_text_color: "Custom"
+                    text_color: app._white
+
+            MDBoxLayout:
+                CustomLabel:
+                    text: "[b] The reports are available in [color=00afff][size=16sp].csv[/size][/color] format only.[/b]"
+                    padding: dp(11.5)
+                    font_size: "14dp"
 
     HiddenCard:
         id: daily_report_card
 
-        MDRelativeLayout:
+        MDBoxLayout:
             orientation: "vertical"
+            spacing: dp(23)
 
-            MDCard:
-                md_bg_color: app._invisible
-                size_hint: (1, .163)
-                pos_hint: {"center_x": .5, "top": 1}
-
-                CloseCardButton:
-                    on_release: app.hide_card(app.card_to_show_or_hide("daily_report_card"))
-
-                MDLabel:
-                    text: "Daily report    "
-                    font_style: "H6"
-                    theme_text_color: "Custom"
-                    text_color: app._white
-                    pos_hint: {"center_y": .5}
-                    halign: "center"
-
-                MDIcon:
-                    icon: "assets/images/daily.png"
-                    pos_hint: {"center_y": .53}
-                    halign: "right"
-                    padding: dp(11.5), dp(8)
-
-            MDCard:
-                md_bg_color: (.6, .6, 1, .1)
-                size_hint: (1, .3)
-                pos_hint: {"center_x": .5, "center_y": .66}    
-                radius: dp(11.5)
-                padding: dp(23), dp(0), dp(0), dp(11.5)
-
-                MDLabel:
-                    text: f"\\n[size=23sp]{app.today},[/size]" +\
-                        f"\\n[size=26sp]{app.month} {app.today_date}, {app.year}[/size]"
-                    markup: True
-                    pos_hint: {"center_y": .5}
-                    font_style: "Subtitle2"
-                    halign: "left"
-                    theme_text_color: "Custom"
-                    text_color: app._white
-
-            MDCard:
-                md_bg_color: (.6, .6, 1, .1)
-                size_hint: (1, .323)
-                pos_hint: {"center_x": .5, "center_y": .318}
-                radius: dp(11.5)
-                padding: dp(11.5)
+            MDBoxLayout:
+                orientation: "horizontal"
+                size_hint: (1, None)
+                height: dp(32)
+                pos_hint: {"top": 1}
 
                 MDBoxLayout:
                     size_hint: (None, None)
-                    size: ("36sp", "36sp")
-                    pos_hint: {"center_y": .5}
+                    size: ("33dp", "33dp")
+                    radius: self.height / 2
+                    md_bg_color: app._tinted
+                    line_color: app._blue
 
-                    MDIcon:
-                        icon: "information"
-                        pos_hint: {"center_y": .5}
-                        theme_text_color: "Custom"
-                        text_color: app._gray
+                    CloseCardButton:
+                        size_hint: (1, 1)
+                        on_release: app.hide_card(app.card_to_show_or_hide("daily_report_card"))
 
                 MDBoxLayout:
-                    MDLabel:
-                        text: "Once you hit the 'Download' button, check your 'Documents Folder' after" +\
-                            " a couple of seconds...\\n\\n[color=00afff]File name pattern: [i]pft_dr_***.csv[/i]"
-                        markup: True
-                        size_hint_y: None
+                    CustomLabel:
+                        text: "[b]Daily report[/b]"
+                        font_size: "20dp"
+                        halign: "center"
+
+                MDBoxLayout:
+                    size_hint: (None, None)
+                    size: ("38dp", "38dp")
+                    Image:
+                        source: "assets/images/daily.png"
                         pos_hint: {"center_y": .5}
-                        font_style: "Subtitle2"
-                        halign: "left"
-                        theme_text_color: "Custom"
-                        text_color: app._gray
 
-            # daily report download btn
-            MDCard:
-                md_bg_color: app._white
-                size_hint: (1, .163)
-                pos_hint: {"center_x": .5, "center_y": .05}
-                radius: dp(11.5), dp(11.5), dp(11.5), dp(11.5)
+            HiddenCardReportsContent:
+                date_time_label: f"\\n[size=23dp]{app.today},[/size]\\n[size=26dp]{app.month} {app.today_date}, {app.year}[/size]"
+                info_text_label: "Tap the 'Download' button and check your 'Downloads Folder' after a couple of seconds...\\n\\n[color=00afff]File name pattern: [i]pft_dr_***.csv[/i]"
 
-                MDRectangleFlatIconButton:
-                    icon: "download"
-                    text: "    Download"
-                    halign: "center"
-                    theme_text_color: "Custom"
-                    text_color: app._dark
-                    theme_icon_color: "Custom"
-                    icon_color: app._dark
-                    font_size: "22dp"
-                    size_hint: (1, 1)
-                    line_color: app._invisible
-                    _no_ripple_effect: True
+            DownloadReportButton:
+                on_release: root.on_download_report_pressed("daily")
 
     HiddenCard:
         id: weekly_report_card
 
-        MDRelativeLayout:
+        MDBoxLayout:
             orientation: "vertical"
+            spacing: dp(23)
 
-            MDCard:
-                md_bg_color: app._invisible
-                size_hint: (1, .163)
-                pos_hint: {"center_x": .5, "top": 1}
-
-                CloseCardButton:
-                    on_release: app.hide_card(app.card_to_show_or_hide("weekly_report_card"))
-
-                MDLabel:
-                    text: "Weekly report    "
-                    font_style: "H6"
-                    theme_text_color: "Custom"
-                    text_color: app._white
-                    pos_hint: {"center_y": .5}
-                    halign: "center"
-
-                MDIcon:
-                    icon: "assets/images/weekly.png"
-                    pos_hint: {"center_y": .53}
-                    halign: "right"
-                    padding: dp(11.5), dp(8)
-
-            MDCard:
-                md_bg_color: (.6, .6, 1, .1)
-                size_hint: (1, .3)
-                pos_hint: {"center_x": .5, "center_y": .66}    
-                radius: dp(11.5)
-                padding: dp(23), dp(0), dp(0), dp(11.5)
-
-                MDLabel:
-                    text: f"\\n[size=23sp]Year {app.week_number_year}: Week {app.current_week_number}[/size]" +\
-                        f"\\n[size=19sp]{app.week_number_start_date} - {app.week_number_end_date}[/size]"
-                    markup: True
-                    pos_hint: {"center_y": .5}
-                    font_style: "Subtitle2"
-                    halign: "left"
-                    theme_text_color: "Custom"
-                    text_color: app._white
-
-            MDCard:
-                md_bg_color: (.6, .6, 1, .1)
-                size_hint: (1, .323)
-                pos_hint: {"center_x": .5, "center_y": .318}
-                radius: dp(11.5)
-                padding: dp(11.5)
+            MDBoxLayout:
+                orientation: "horizontal"
+                size_hint: (1, None)
+                height: dp(32)
+                pos_hint: {"top": 1}
 
                 MDBoxLayout:
                     size_hint: (None, None)
-                    size: ("36sp", "36sp")
-                    pos_hint: {"center_y": .5}
+                    size: ("33dp", "33dp")
+                    radius: self.height / 2
+                    md_bg_color: app._tinted
+                    line_color: app._blue
 
-                    MDIcon:
-                        icon: "information"
-                        pos_hint: {"center_y": .5}
-                        theme_text_color: "Custom"
-                        text_color: app._gray
+                    CloseCardButton:
+                        size_hint: (1, 1)
+                        on_release: app.hide_card(app.card_to_show_or_hide("weekly_report_card"))
 
                 MDBoxLayout:
-                    MDLabel:
-                        text: "Once you hit the 'Download' button, check your 'Documents Folder' after" +\
-                            " a couple of seconds...\\n\\n[color=00afff]File name pattern: [i]pft_wr_***.csv[/i]"
-                        markup: True
-                        size_hint_y: None
+                    CustomLabel:
+                        text: "[b]Weekly report[/b]"
+                        font_size: "20dp"
+                        halign: "center"
+
+                MDBoxLayout:
+                    size_hint: (None, None)
+                    size: ("38dp", "38dp")
+                    Image:
+                        source: "assets/images/weekly.png"
                         pos_hint: {"center_y": .5}
-                        font_style: "Subtitle2"
-                        halign: "left"
-                        theme_text_color: "Custom"
-                        text_color: app._gray
 
-            # weekly report download btn
-            MDCard:
-                md_bg_color: app._white
-                size_hint: (1, .163)
-                pos_hint: {"center_x": .5, "center_y": .05}
-                radius: dp(11.5), dp(11.5), dp(11.5), dp(11.5)
+            HiddenCardReportsContent:
+                date_time_label: f"\\n[size=23dp]Year {app.week_number_year}: Week {app.current_week_number}[/size]\\n[size=19dp]{app.week_number_start_date} - {app.week_number_end_date}[/size]"
+                info_text_label: "Tap the 'Download' button,  and check your 'Downloads Folder' after a couple of seconds...\\n\\n[color=00afff]File name pattern: [i]pft_wr_***.csv[/i]"
 
-                MDRectangleFlatIconButton:
-                    icon: "download"
-                    text: "    Download"
-                    halign: "center"
-                    theme_text_color: "Custom"
-                    text_color: app._dark
-                    theme_icon_color: "Custom"
-                    icon_color: app._dark
-                    font_size: "22dp"
-                    size_hint: (1, 1)
-                    line_color: app._invisible
-                    _no_ripple_effect: True
-       
+            DownloadReportButton:
+                on_release: root.on_download_report_pressed("weekly")
+
     HiddenCard:
         id: monthly_report_card
 
-        MDRelativeLayout:
+        MDBoxLayout:
             orientation: "vertical"
+            spacing: dp(23)
 
-            MDCard:
-                md_bg_color: app._invisible
-                size_hint: (1, .163)
-                pos_hint: {"center_x": .5, "top": 1}
-
-                CloseCardButton:
-                    on_release: app.hide_card(app.card_to_show_or_hide("monthly_report_card"))
-
-                MDLabel:
-                    text: "Monthly report    "
-                    font_style: "H6"
-                    theme_text_color: "Custom"
-                    text_color: app._white
-                    pos_hint: {"center_y": .5}
-                    halign: "center"
-
-                MDIcon:
-                    icon: "assets/images/monthly.png"
-                    pos_hint: {"center_y": .53}
-                    halign: "right"
-                    padding: dp(11.5), dp(8)
-
-            MDCard:
-                md_bg_color: (.6, .6, 1, .1)
-                size_hint: (1, .3)
-                pos_hint: {"center_x": .5, "center_y": .66}    
-                radius: dp(11.5)
-                padding: dp(23), dp(0), dp(6), dp(11.5)
-
-                MDLabel:
-                    text: f"[size=23sp]For the month of\\n{app.previous_month}[/size]"
-                    markup: True
-                    pos_hint: {"center_y": .5}
-                    font_style: "Subtitle2"
-                    halign: "left"
-                    theme_text_color: "Custom"
-                    text_color: app._white
-
-            MDCard:
-                md_bg_color: (.6, .6, 1, .1)
-                size_hint: (1, .323)
-                pos_hint: {"center_x": .5, "center_y": .318}
-                radius: dp(11.5)
-                padding: dp(11.5)
+            MDBoxLayout:
+                orientation: "horizontal"
+                size_hint: (1, None)
+                height: dp(32)
+                pos_hint: {"top": 1}
 
                 MDBoxLayout:
                     size_hint: (None, None)
-                    size: ("36sp", "36sp")
-                    pos_hint: {"center_y": .5}
+                    size: ("33dp", "33dp")
+                    radius: self.height / 2
+                    md_bg_color: app._tinted
+                    line_color: app._blue
 
-                    MDIcon:
-                        icon: "information"
-                        pos_hint: {"center_y": .5}
-                        theme_text_color: "Custom"
-                        text_color: app._gray
+                    CloseCardButton:
+                        size_hint: (1, 1)
+                        on_release: app.hide_card(app.card_to_show_or_hide("monthly_report_card"))
 
                 MDBoxLayout:
-                    MDLabel:
-                        text: "Once you hit the 'Download' button, check your 'Documents Folder' after" +\
-                            " a couple of seconds...\\n\\n[color=00afff]File name pattern: [i]pft_mr_***.csv[/i]"
-                        markup: True
-                        size_hint_y: None
+                    CustomLabel:
+                        text: "[b]Monthly report[/b]"
+                        font_size: "20dp"
+                        halign: "center"
+
+                MDBoxLayout:
+                    size_hint: (None, None)
+                    size: ("38dp", "38dp")
+                    Image:
+                        source: "assets/images/monthly.png"
                         pos_hint: {"center_y": .5}
-                        font_style: "Subtitle2"
-                        halign: "left"
-                        theme_text_color: "Custom"
-                        text_color: app._gray
 
-            # monthly report download btn
-            MDCard:
-                md_bg_color: app._white
-                size_hint: (1, .163)
-                pos_hint: {"center_x": .5, "center_y": .05}
-                radius: dp(11.5), dp(11.5), dp(11.5), dp(11.5)
+            HiddenCardReportsContent:
+                date_time_label: f"[size=23dp]For the month of\\n{app.previous_month}[/size]"
+                info_text_label: "Tap the 'Download' button and check your 'Downloads Folder' after a couple of seconds...\\n\\n[color=00afff]File name pattern: [i]pft_mr_***.csv[/i]"
 
-                MDRectangleFlatIconButton:
-                    icon: "download"
-                    text: "    Download"
-                    halign: "center"
-                    theme_text_color: "Custom"
-                    text_color: app._dark
-                    theme_icon_color: "Custom"
-                    icon_color: app._dark
-                    font_size: "22dp"
-                    size_hint: (1, 1)
-                    line_color: app._invisible
-                    _no_ripple_effect: True
+            DownloadReportButton:
+                on_release: root.on_download_report_pressed("monthly")
 
     HiddenCard:
         id: yearly_report_card
-        
-        MDRelativeLayout:
+
+        MDBoxLayout:
             orientation: "vertical"
+            spacing: dp(23)
 
-            MDCard:
-                md_bg_color: app._invisible
-                size_hint: (1, .163)
-                pos_hint: {"center_x": .5, "top": 1}
-
-                CloseCardButton:
-                    on_release: app.hide_card(app.card_to_show_or_hide("yearly_report_card"))
-
-                MDLabel:
-                    text: "Yearly report    "
-                    font_style: "H6"
-                    theme_text_color: "Custom"
-                    text_color: app._white
-                    pos_hint: {"center_y": .5}
-                    halign: "center"
-
-                MDIcon:
-                    icon: "assets/images/yearly.png"
-                    pos_hint: {"center_y": .53}
-                    halign: "right"
-                    padding: dp(11.5), dp(8)
-
-            MDCard:
-                md_bg_color: (.6, .6, 1, .1)
-                size_hint: (1, .3)
-                pos_hint: {"center_x": .5, "center_y": .66}    
-                radius: dp(11.5)
-                padding: dp(23), dp(0), dp(0), dp(11.5)
-
-                MDLabel:
-                    text: f"\\n[size=26sp]Year {app.year},[/size]" +\
-                        f"\\n[size=23sp]1 January - {app.today_date} {app.month}[/size]"
-                    markup: True
-                    pos_hint: {"center_y": .5}
-                    font_style: "Subtitle2"
-                    halign: "left"
-                    theme_text_color: "Custom"
-                    text_color: app._white
-
-            MDCard:
-                md_bg_color: (.6, .6, 1, .1)
-                size_hint: (1, .323)
-                pos_hint: {"center_x": .5, "center_y": .318}
-                radius: dp(11.5)
-                padding: dp(11.5)
+            MDBoxLayout:
+                orientation: "horizontal"
+                size_hint: (1, None)
+                height: dp(32)
+                pos_hint: {"top": 1}
 
                 MDBoxLayout:
                     size_hint: (None, None)
-                    size: ("36sp", "36sp")
-                    pos_hint: {"center_y": .5}
+                    size: ("33dp", "33dp")
+                    radius: self.height / 2
+                    md_bg_color: app._tinted
+                    line_color: app._blue
 
-                    MDIcon:
-                        icon: "information"
-                        pos_hint: {"center_y": .5}
-                        theme_text_color: "Custom"
-                        text_color: app._gray
+                    CloseCardButton:
+                        size_hint: (1, 1)
+                        on_release: app.hide_card(app.card_to_show_or_hide("yearly_report_card"))
 
                 MDBoxLayout:
-                    MDLabel:
-                        text: "Once you hit the 'Download' button, check your 'Documents Folder' after" +\
-                            " a couple of seconds...\\n\\n[color=00afff]File name pattern: [i]pft_yr_***.csv[/i]"
-                        markup: True
-                        size_hint_y: None
+                    CustomLabel:
+                        text: "[b]Yearly report[/b]"
+                        font_size: "20dp"
+                        halign: "center"
+
+                MDBoxLayout:
+                    size_hint: (None, None)
+                    size: ("38dp", "38dp")
+                    Image:
+                        source: "assets/images/yearly.png"
                         pos_hint: {"center_y": .5}
-                        font_style: "Subtitle2"
-                        halign: "left"
-                        theme_text_color: "Custom"
-                        text_color: app._gray
 
-            # yearly report download btn
-            MDCard:
-                md_bg_color: app._white
-                size_hint: (1, .163)
-                pos_hint: {"center_x": .5, "center_y": .05}
-                radius: dp(11.5), dp(11.5), dp(11.5), dp(11.5)
+            HiddenCardReportsContent:
+                date_time_label: f"\\n[size=26dp]Year {app.year},[/size]\\n[size=23dp]1 January - {app.today_date} {app.month}[/size]"
+                info_text_label: "Tap the 'Download' button and check your 'Downloads Folder' after a couple of seconds...\\n\\n[color=00afff]File name pattern: [i]pft_yr_***.csv[/i]"
 
-                MDRectangleFlatIconButton:
-                    icon: "download"
-                    text: "    Download"
-                    halign: "center"
-                    theme_text_color: "Custom"
-                    text_color: app._dark
-                    theme_icon_color: "Custom"
-                    icon_color: app._dark
-                    font_size: "22dp"
-                    size_hint: (1, 1)
-                    line_color: app._invisible
-                    _no_ripple_effect: True
+            DownloadReportButton:
+                on_release: root.on_download_report_pressed("yearly")
 
 """
 
@@ -538,4 +295,28 @@ Builder.load_string(KV)
 
 
 class ReportsScreen(MDScreen):
-    pass
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._green = "#2fc46c"
+
+    def _download_report(self, csv_type):
+        app = App.get_running_app()
+        parser = app.data_handler.parser
+        filepath = parser.export_to_csv(csv_type=csv_type)
+
+        if filepath:
+            app.show_snackbar(text=f"pft_{csv_type}_report Downloaded Successfully!", background=self._green)
+        else:
+            app.show_snackbar(text="Download failed. Try again.")
+
+    def on_download_report_pressed(self, csv_type):
+        if platform == "android":
+            from android.permissions import request_permissions, Permission, check_permission # type: ignore
+            if check_permission(Permission.WRITE_EXTERNAL_STORAGE): self._download_report(csv_type)
+            else:
+                def callback(permissions, grants):
+                    if Permission.WRITE_EXTERNAL_STORAGE in permissions and grants[0]: self._download_report(csv_type)
+                    else: App.get_running_app().show_snackbar(text="Storage permission denied.")
+                request_permissions([Permission.WRITE_EXTERNAL_STORAGE], callback)
+
+        else: self._download_report(csv_type)

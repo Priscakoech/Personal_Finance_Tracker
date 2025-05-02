@@ -1,3 +1,4 @@
+
 from kivy.lang import Builder
 from kivymd.uix.screen import MDScreen
 
@@ -9,10 +10,9 @@ KV = """
 
     Image:
         source: "assets/images/pft_logo.png"
-        size_hint: None, None
-        width: "300dp"
-        height: "300dp"
-        pos_hint: {"center_x": .5, "center_y": .7}
+        size_hint: (None, None)
+        size: ("250dp", "250dp")
+        pos_hint: {"center_x": .48, "center_y": .75}
 
     MDLabel:
         padding: dp(25)
@@ -30,7 +30,7 @@ KV = """
         size_hint: (.85, .07)
         pos_hint: {"center_x": .5, "center_y": .18}
         radius: dp(11.5), dp(11.5), dp(11.5), dp(11.5)
-        on_release: app.change_screen_wt("onboarding_screen", "left")
+        on_release: app.switch_screen("onboarding_screen")
 
         MDBoxLayout:
             padding: (63, 0)
@@ -60,7 +60,7 @@ KV = """
         halign: "center"
         theme_text_color: "Custom"
         text_color: app._gray
-        on_ref_press: app.goto_hyperlink(args[1])
+        on_ref_press: root.goto_hyperlink(args[1])
 
 """
 
@@ -68,4 +68,11 @@ Builder.load_string(KV)
 
 
 class WelcomeScreen(MDScreen):
-    pass
+    def __init__(self, switch_screen=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.switch_screen = switch_screen
+
+    def goto_hyperlink(self, ref):
+        """Handles the reference texts..."""
+        if ref == "privacy": self.switch_screen("privacy_policy_screen")
+        elif ref == "terms": self.switch_screen("terms_of_use_screen")

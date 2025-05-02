@@ -1,58 +1,69 @@
+
+import os
+import calendar
+from datetime import datetime, timedelta
+from kivy.app import App
+from kivy.properties import StringProperty
+from kivy.utils import platform, get_color_from_hex
 from kivy.animation import Animation
 from kivy.clock import Clock
-from kivy.core.window import Window
 from kivy.metrics import dp
-from kivy.uix.image import Image
-from kivy.utils import get_color_from_hex
+from kivy.core.window import Window
+from kivy.storage.jsonstore import JsonStore
+from kivy.uix.screenmanager import FadeTransition
 from kivymd.app import MDApp
-from kivy.uix.screenmanager import SlideTransition, NoTransition, CardTransition
 from kivymd.uix.screenmanager import MDScreenManager
-from kivymd.uix.boxlayout import MDBoxLayout
-from kivymd.uix.card import MDCard
-from kivymd.uix.label import MDLabel
-from kivymd.uix.list import TwoLineListItem
+from kivymd.uix.snackbar import Snackbar
 from kivymd.utils.set_bars_colors import set_bars_colors
-from datetime import datetime, timedelta
-import calendar
 
 from UI.welcome_screen import WelcomeScreen
+from UI.home_screen import HomeScreen
 from UI.onboarding_screen import OnboardingScreen
 from UI.privacy_policy_screen import PrivacyPolicyScreen
 from UI.terms_of_use_screen import TermsOfUseScreen
-from UI.full_name_screen import FullNameScreen
 from UI.wallet_setup_screen import WalletSetupScreen
-from UI.m_pesa import AddMpesaAccScreen
-from UI.paypal import AddPaypalAccScreen
-from UI.crypto import AddCryptoWalletScreen
-# from UI.cards import AddCardScreen
-from UI.home_screen import HomeScreen
 from UI.transactions_screen import TransactionsScreen
-from UI.wallet_screen import WalletScreen
-from UI.text_insight_screen import InsightScreen1
-from UI.visual_insight_screen import InsightScreen2
+from UI.transaction_knowledge_base_screen import TransactionKBScreen
 from UI.settings_screen import SettingsScreen
 from UI.personal_info_screen import PersonalInfoScreen
 from UI.reports_screen import ReportsScreen
+from UI.no_internet_screen import NoInternetScreen
+
+from BACKEND.firebase_rest import FirebaseREST
+from BACKEND.data_handler import DataHandler
+from BACKEND.message_parser import MpesaMessageParser
 
 
 # this window size is for development purposes only...
-Window.size = (386, 723)
+# Window.size = (386, 723)
+
+
+if platform == 'android':
+    from android.storage import app_storage_path # type: ignore
+    path = app_storage_path()
+
+else: path = os.getcwd()
+
+user_data_store = JsonStore(os.path.join(path, "lightweight_user_data.json"))
+text_insights_store = JsonStore(os.path.join(path, "text_insights_data.json"))
+
 
 class PersonalFinanceTrackerApp(MDApp):
+    screen_manager, screen_stack = None, []
+    firebase, uid, id_token, refresh_token = None, None, None, None
+    full_name, email_address, profile_photo = StringProperty(""), StringProperty(""), StringProperty("")
+
     def __init__(self):
         super().__init__()
         self.title = "Personal Finance Tracker"
+        self.theme_cls.material_style = "M3"
         self.theme_cls.theme_style = "Dark"
+        self.data_handler = DataHandler()
 
         # colors
-        self._dark, self._tinted, self._light, self._white, self._gray, self._blue, self._green, self._invisible, self._red = (
-            "#00001fff", (.6, .6, 1, .1), "#c800f0", "#dddddd", "#a6a6a6", "#005eff", "#2fc46c", (1, 1, 1, 0), "#ff2f3f"
+        self._dark, self._tinted, self._light, self._white, self._gray, self._blue, self._green, self._invisible, self._red, self._lightgray = (
+            "#00001fff", (.6, .6, 1, .1), "#c800f0", "#dddddd", "#a6a6a6", "#005eff", "#2fc46c", (1, 1, 1, 0), "#ff2f3f", "#aaaaaa26"
         )
-
-        self.full_name = "Prisca Koech"
-        self.email_address = "priscakoech448@gmail.com"
-        self.profile_photo = "assets/images/default_avatar.jpg"
-        self.total_user_balance = 567477.967
 
         # variables for determining date and time
         self.current_hour = datetime.now().hour
@@ -68,311 +79,200 @@ class PersonalFinanceTrackerApp(MDApp):
         self.week_number_start_date = self.week_number_start_date.strftime("%B %d")
         self.week_number_end_date = self.week_number_end_date.strftime("%B %d")
 
-        # ------------------------- insight_screen content -----------------------------------
-
-        # self.client = OpenAI(api_key=OPENAI_API_KEY)
-
-        self.all_insights, self.tab_insights, self.all_insights_index = [], {}, 0
-
-        self.tab_categories = [
-            "daily_insight", "weekly_insight", "monthly_insight", "yearly_insight", "general_insight"
-        ]
-        self.insight_categories = ["daily", "weekly", "monthly", "yearly", "general"]
-
-        for category in self.insight_categories:
-            # self.insight = self.client.chat.completions.create(
-            #     model="gpt-4o-mini",
-            #     messages=[
-            #         {"role": "system",
-            #          "content": "You are my personal finance tracker app assistant.... "
-            #                     "I want you to generate insights based on the flow of my "
-            #                     "finances.... use an arbitrary account...currency(Ksh.)...also the output "
-            #                     "should only contain 4 text styles... in markdown.... "
-            #                     "#title, **subtitle**, *italics*, and - lists.... nothing else...."
-            #                     "and also normal text for comments/overview..."
-            #          },
-            #
-            #         {"role": "user", "content": f"generate a {category} insight"}
-            #     ]
-            # )
-            #
-            # self.all_insights.append(
-            #     MarkdownFormatter().format_text(text=self.insight.choices[0].message.content)
-            # )
-
-            # self.no_internet_fallback_txt = "[b]\nOops!\nYou are offline...[/b]"
-            self.insight = "[b]\nFor development purposes, \nInsight generation has been paused....[/b]"
-            self.all_insights.append(self.insight)
-
-        for tab_category in self.tab_categories:
-            self.insight_dict = {
-                f"{tab_category}": {
-                    "text": f"{self.all_insights[self.all_insights_index]}",
-                    "label": MDLabel(
-                        text=f"\n\n\n\nClick on 'Generate insights' to view "
-                             f"{self.insight_categories[self.all_insights_index]} insights...",
-                        halign="left",
-                        theme_text_color="Custom",
-                        text_color=self._white,
-                        markup=True,
-                    ),
-                }
-            }
-            self.tab_insights.update(self.insight_dict)
-            self.all_insights_index += 1
 
     def build(self):
-        self.set_bars_colors()
+        set_bars_colors(get_color_from_hex(self._dark), get_color_from_hex(self._dark), "Light")
+        self.firebase = FirebaseREST()
 
-        screen_manager = MDScreenManager()
-        screen_manager.add_widget(WelcomeScreen())
-        screen_manager.add_widget(OnboardingScreen())
-        screen_manager.add_widget(PrivacyPolicyScreen())
-        screen_manager.add_widget(TermsOfUseScreen())
-        screen_manager.add_widget(FullNameScreen())
-        screen_manager.add_widget(WalletSetupScreen())
-        screen_manager.add_widget(AddMpesaAccScreen())
-        screen_manager.add_widget(AddPaypalAccScreen())
-        screen_manager.add_widget(AddCryptoWalletScreen())
-        # screen_manager.add_widget(AddCardScreen())
-        screen_manager.add_widget(HomeScreen())
-        screen_manager.add_widget(TransactionsScreen())
-        screen_manager.add_widget(WalletScreen())
-        screen_manager.add_widget(InsightScreen1())
-        screen_manager.add_widget(InsightScreen2())
-        screen_manager.add_widget(SettingsScreen())
-        screen_manager.add_widget(PersonalInfoScreen())
-        screen_manager.add_widget(ReportsScreen())
+        self.screen_manager = MDScreenManager(transition=FadeTransition(duration=.2, clearcolor=self._dark))
+        self.screen_manager.add_widget(HomeScreen(user_data_store=user_data_store, text_insights_store=text_insights_store))
+        self.screen_manager.add_widget(OnboardingScreen(store=user_data_store, firebase=self.firebase, show_snackbar=self.show_snackbar, update_ui=self.update_ui))
+        self.screen_manager.add_widget(PrivacyPolicyScreen())
+        self.screen_manager.add_widget(TermsOfUseScreen())
+        self.screen_manager.add_widget(WalletSetupScreen(store=user_data_store, firebase=self.firebase, uid=self.uid, id_token=self.id_token, show_snackbar=self.show_snackbar, hide_card=self.hide_card, card_to_show_or_hide=self.card_to_show_or_hide))
+        self.screen_manager.add_widget(TransactionsScreen())
+        self.screen_manager.add_widget(TransactionKBScreen())
+        self.screen_manager.add_widget(SettingsScreen(store=user_data_store, snackbar=self.show_snackbar))
+        self.screen_manager.add_widget(PersonalInfoScreen(store=user_data_store, snackbar=self.show_snackbar))
+        self.screen_manager.add_widget(ReportsScreen())
 
-        return screen_manager
+        self.enter_app(screen_manager=self.screen_manager)
+
+        return self.screen_manager
 
     def on_start(self):
-        # Binding the Android back button to the go_back() method
         Window.bind(on_keyboard=self.on_keyboard)
+        if platform == "android": self.start_message_listener()
 
-        self.minimalistic_transactions_view()
+    def enter_app(self, screen_manager):
+        self.profile_photo = "assets/images/default_avatar.jpg"
+        if user_data_store.exists("profile_photo"): self.profile_photo = user_data_store.get("profile_photo")["location"]
 
-        # Add the labels to their respective cards
-        for tab_id, tab_data in self.tab_insights.items():
-            self.root.get_screen("insight_screen1").ids[tab_id].add_widget(tab_data["label"])
+        if user_data_store.exists("acc_was_added") and user_data_store.get("acc_was_added")["status"] == False:
+            screen_manager.current = "wallet_setup_screen"
 
-    def set_bars_colors(self):
-        set_bars_colors(get_color_from_hex(self._dark), get_color_from_hex(self._dark), "Light")
+        elif user_data_store.exists("credentials") and user_data_store.exists("acc_was_added") and user_data_store.get("acc_was_added")["status"] == True:
+            refresh_token = user_data_store.get("credentials")["refresh_token"]
+            id_token, uid = self.refresh_id_token(refresh_token=refresh_token)
 
-    def go_back(self):
-        self.root.current = self.root.previous()
+            if id_token:
+                full_name = self.firebase.get_data(id_token=id_token, path=f"users/{uid}/user_profile")["Full name"]
+                email = self.firebase.get_data(id_token=id_token, path=f"users/{uid}/user_profile")["Email Address"]
+                screen_manager.current = "home_screen"
+                Clock.schedule_once(lambda dt: self.update_ui(name=full_name, email=email), 0)
+                self.load_user_data(id_token=id_token, uid=uid, full_name=full_name)
 
-    def on_keyboard(self, window, key, *args):
-        # Android back button (keycode 27)
-        if key == 27:
-            self.go_back()
-            return True
-        return False
+            elif refresh_token == "": screen_manager.current = "onboarding_screen"
 
-    def change_screen_wt(self, screen_name, direction, mode="push"):
-        """change screen with transition"""
-        pop_screen_list = [
-            "home_screen", "transactions_screen", "wallet_screen", "insight_screen1", "insight_screen2",
-            "settings_screen", "personal_info_screen", "reports_screen"
-        ]
-
-        if self.root.current in pop_screen_list:
-            self.root.transition = CardTransition(direction=direction, mode=mode)
+            else:
+                no_internet_screen = NoInternetScreen()
+                no_internet_screen.enter_app_callback = self.enter_app
+                screen_manager.add_widget(no_internet_screen)
+                screen_manager.current = "no_internet_screen"
 
         else:
-            self.root.transition = SlideTransition(direction=direction)
-        self.root.current = screen_name
+            screen_manager.add_widget(WelcomeScreen(switch_screen=self.switch_screen))
+            screen_manager.current = "welcome_screen"
 
-    def change_screen_wnt(self, screen_name):
-        """change screen with no transition"""
-        self.root.transition = NoTransition()
-        self.root.current = screen_name
+    def load_user_data(self, id_token, uid, full_name):
+        existing_raw_data = self.firebase.get_data(id_token=id_token, path=f"users/{uid}/raw_data")
+        next_key = WalletSetupScreen().get_next_account_key(existing_raw_data)
+        prev_number = int(next_key.split("_")[1]) - 1
+        prev_key = f"account_{prev_number}"
+        transactions = self.firebase.get_data(id_token=id_token, path=f"users/{uid}/raw_data/{prev_key}")
+        user_phone = self.firebase.get_data(id_token=id_token, path=f"users/{uid}/raw_data/{prev_key}")["Account ID"]
 
-    def goto_hyperlink(self, ref):
-        """Handles the 'ref' text in the welcome screen..."""
-        if ref == "privacy": self.change_screen_wt("privacy_policy_screen", "left")
-        elif ref == "terms": self.change_screen_wt("terms_of_use_screen", "left")
+        if transactions and "Transactions" in transactions: transactions = transactions["Transactions"]
+        else: transactions = []
 
-    def enable_submit_btn(self):
-        """
-        Enables the submit button if the lengths of first_name, and last_name are greater than 0...
-        Disables it if either has a length of 0...
-        """
-        current_screen = self.root.get_screen("full_name_input_screen")
+        existing_kb = self.firebase.get_data(
+            id_token=id_token,
+            path=f"users/{uid}/knowledge_base"
+        )
 
-        if len(current_screen.ids.first_name.text) > 0 and len(current_screen.ids.last_name.text) > 0:
-            current_screen.ids.submit_btn_bg.md_bg_color = self._white
-            current_screen.ids.submit_btn_bg.ripple_behavior = True
-            current_screen.ids.submit_btn.disabled = False
+        knowledge_base = {}
+        if existing_kb and "Knowledge Base" in existing_kb:
+            knowledge_base = existing_kb["Knowledge Base"]
 
-        else:
-            current_screen.ids.submit_btn_bg.md_bg_color = self._tinted
-            current_screen.ids.submit_btn_bg.ripple_behavior = False
-            current_screen.ids.submit_btn.disabled = True
+        self.data_handler.parser = MpesaMessageParser(
+            raw_data=transactions,
+            user_name=full_name.capitalize(),
+            user_phone=user_phone,
+            firebase=self.firebase, id_token=id_token, uid=uid,
+            knowledge_base=knowledge_base
+        )
 
-    def get_name(self):
-        first_name = self.root.get_screen("full_name_input_screen").ids.first_name.text.capitalize()
-        last_name = self.root.get_screen("full_name_input_screen").ids.last_name.text.capitalize()
-        full_name = f"{first_name} {last_name}"
-        return full_name
+        self.data_handler.all_transactions = self.data_handler.parser.get_parsed_msgs()
 
     def greeting_text(self):
         if 0 <= self.current_hour <= 11: return "Good Morning,"
         if 12 <= self.current_hour <= 15: return "Good Afternoon,"
         if 16 <= self.current_hour <= 23: return "Good Evening,"
 
-    def change_indicator_color(self, current_slide_index):
-        # Resetting all indicator colors to gray...
-        self.root.get_screen("home_screen").ids.slide1_indicator_color.md_bg_color = "#a6a6a6"
-        self.root.get_screen("home_screen").ids.slide2_indicator_color.md_bg_color = "#a6a6a6"
+    def update_ui(self, name, email):
+        self.full_name = name
+        self.email_address = email
+        self.profile_photo = ""
+        if user_data_store.exists("profile_photo"): self.profile_photo = user_data_store.get("profile_photo")["location"]
+        else: self.profile_photo = "assets/images/default_avatar.jpg"
 
-        # Changing indicator colors to blue based on the current slide index
-        if current_slide_index == 0:
-            self.root.get_screen("home_screen").ids.slide1_indicator_color.md_bg_color = "#005eff"
-        if current_slide_index == 1:
-            self.root.get_screen("home_screen").ids.slide2_indicator_color.md_bg_color = "#005eff"
+        h_screen = self.root.get_screen("home_screen") # h means home
+        s_screen = self.root.get_screen("settings_screen") # s means settings
+        pi_screen = self.root.get_screen("personal_info_screen") # pi means personal info
 
-    def change_chart(self):
-        self.root.get_screen("home_screen").ids.chart.source = "assets/images/income_expenditure_bar.png" \
-            if self.root.get_screen("home_screen").ids.chart.source == "assets/images/income_expenditure_graph.png" \
-            else "assets/images/income_expenditure_graph.png"
+        h_screen.ids.home_dp.source = self.profile_photo
+        h_screen.ids.greetings.text = f"[color=a6a6a6]{self.greeting_text()}[/color] [size=18dp]{self.full_name.split()[0]}[/size]"
+        s_screen.ids.settings_dp.source = self.profile_photo
+        s_screen.ids.settings_name.text = self.full_name
+        s_screen.ids.settings_mail.text = self.email_address
+        pi_screen.ids.pi_dp.source = self.profile_photo
+        pi_screen.ids.pi_name.text = f"[color=a6a6a6][size=14dp][b]Full name[/b][/size][/color]\n{self.full_name}"
+        pi_screen.ids.pi_mail.text = f"[color=a6a6a6][size=14dp][b]Email address[/b][/size][/color]\n{self.email_address}"
 
-    def minimalistic_transactions_view(self):
-        for i in range(6):
-            list_item = TwoLineListItem(divider=None, _no_ripple_effect=True)
+    def start_message_listener(self):
+        Clock.schedule_interval(self.get_new_mpesa_messages, 36)
 
-            list_item_container = MDCard(
-                md_bg_color=(0, 0, 0, 0),
-                size_hint=(1, 1),
-                pos_hint={"center_x": .5, "center_y": .5},
-                padding=dp(6)
-            )
+    def get_new_mpesa_messages(self, dt):
+        wallet_setup_screen = App.get_running_app().root.get_screen("wallet_setup_screen")
+        wallet_setup_screen.fetch_mpesa_messages()
 
-            list_item_bg = MDCard(
-                md_bg_color=self._tinted,
-                padding=(dp(0), dp(0), dp(10), dp(0)),
-                radius=dp(11.5),
-            )
+    def go_back(self):
+        if self.root.current == "home_screen":
+            if self.root.get_screen("home_screen").ids.bottom_nav.current != "home_tab":
+                self.root.get_screen("home_screen").ids.bottom_nav.switch_tab("home_tab")
+                self.root.get_screen("home_screen").ids.bottom_nav.current = "home_tab"
+                return True
+            return False
 
-            logo_bg = MDBoxLayout(
-                size_hint=(None, None),
-                width="50dp",
-                height="50dp",
-                pos_hint={"center_y": .5}
-            )
+        if self.screen_stack:
+            self.root.current = self.screen_stack.pop()
+            return True
+        return False
 
-            logo = Image(
-                source="assets/images/mpesa_icon.png",
-                size_hint=(1, .9),
-                pos_hint={"center_y": .5}
-            )
+    def on_keyboard(self, window, key, *args):
+        if key == 27 or key == 1001:
+            if self.root.current == "welcome_screen" or self.root.current == "onboarding_screen" or self.root.get_screen("home_screen").ids.bottom_nav.current == "home_tab":
+                return False
+            self.go_back()
+            return True
 
-            logo_bg.add_widget(logo)
-            list_item_bg.add_widget(logo_bg)
-
-            left_text_bg = MDBoxLayout(padding=dp(11.5))
-
-            left_text = MDLabel(
-                text=f"M-PESA\n[color=a6a6a6][b][size=13dp]1/1/25 at 4:07 PM[/size][/b]",
-                markup=True,
-                halign="left",
-                font_size="15dp",
-                theme_text_color="Custom",
-                text_color=self._white
-            )
-
-            left_text_bg.add_widget(left_text)
-            list_item_bg.add_widget(left_text_bg)
-
-            right_text_bg = MDBoxLayout()
-
-            right_text = MDLabel(
-                text="+ 100.00",
-                bold=True,
-                halign="right",
-                pos_hint={"center_x": .5, "center_y": .5},
-                theme_text_color="Custom",
-                text_color=self._green
-            )
-
-            right_text_bg.add_widget(right_text)
-            list_item_bg.add_widget(right_text_bg)
-
-            list_item_container.add_widget(list_item_bg)
-            list_item.add_widget(list_item_container)
-
-            self.root.get_screen("home_screen").ids.minimalistic_transactions.add_widget(list_item)
+    def switch_screen(self, screen_name):
+        self.root.transition = FadeTransition(duration=.2, clearcolor=self._dark)
+        current_screen = self.root.current
+        if current_screen != screen_name:
+            self.screen_stack.append(current_screen)
+            self.root.current = screen_name
 
     def card_to_show_or_hide(self, card_id):
         card = None
-        if card_id == "daily_report_card":
-            card = self.root.get_screen("reports_screen").ids.daily_report_card
-
-        if card_id == "weekly_report_card":
-            card = self.root.get_screen("reports_screen").ids.weekly_report_card
-
-        if card_id == "monthly_report_card":
-            card = self.root.get_screen("reports_screen").ids.monthly_report_card
-
-        if card_id == "yearly_report_card":
-            card = self.root.get_screen("reports_screen").ids.yearly_report_card
-
-        if card_id == "change_avatar":
-            card = self.root.get_screen("personal_info_screen").ids.change_avatar
+        reports_screen = self.root.get_screen("reports_screen")
+        wallet_setup_screen = self.root.get_screen("wallet_setup_screen")
+        if card_id == "daily_report_card": card = reports_screen.ids.daily_report_card
+        if card_id == "weekly_report_card": card = reports_screen.ids.weekly_report_card
+        if card_id == "monthly_report_card": card = reports_screen.ids.monthly_report_card
+        if card_id == "yearly_report_card": card = reports_screen.ids.yearly_report_card
+        if card_id == "add_mpesa_acc_card": card = wallet_setup_screen.ids.add_mpesa_acc_card
+        if card_id == "add_paypal_acc_card": card = wallet_setup_screen.ids.add_paypal_acc_card
+        if card_id == "add_crypto_wallet_card": card = wallet_setup_screen.ids.add_crypto_wallet_card
+        if card_id == "coming_soon_info_card": card = wallet_setup_screen.ids.coming_soon_info_card
 
         return card
 
-    @staticmethod
-    def show_card(card):
-        show_card_animation = Animation(y=0, d=.5, t="out_quad")
+    def show_card(self, card):
+        show_card_animation = Animation(y=0, d=.3, t="out_quad")
         show_card_animation.start(card)
 
-    @staticmethod
-    def hide_card(card):
-        hide_card_animation = Animation(y=-card.height, d=.5, t="out_quad")
+    def hide_card(self, card):
+        hide_card_animation = Animation(y=-card.height, d=.3, t="out_quad")
         hide_card_animation.start(card)
 
     @staticmethod
-    def change_profile_pic():
-        pass
+    def show_snackbar(text, background="#ff2f3f"):
+        Snackbar(
+            text=f"{text}", font_size=dp(16), bg_color=background,
+            snackbar_animation_dir="Top", snackbar_x="20dp",
+            snackbar_y=Window.height - dp(96),
+            radius=[11.5, 11.5, 11.5, 11.5],
+            size_hint_x=(
+                Window.width - (dp(20) * 2)
+            ) / Window.width
+        ).open()
 
-    def start_text_animation(self):
-        # Disable the button and tweak its appearance
-        self.root.get_screen("insight_screen1").ids.generate_button.disabled = True
-        self.root.get_screen("insight_screen1").ids.generate_button.text = "Next insight in 24hrs..."
-        self.root.get_screen("insight_screen1").ids.btn_bg.md_bg_color = (.6, .6, 1, .1)
-        self.root.get_screen("insight_screen1").ids.btn_bg.radius = dp(0)
+    def refresh_id_token(self, refresh_token):
+        try:
+            res = self.firebase.refresh_token(refresh_token=refresh_token)
+            new_id_token = res['id_token']
+            new_refresh_token = res['refresh_token']
+            uid = res['user_id']
 
-        # Loop through all tabs and start animations
-        for tab_id, tab_data in self.tab_insights.items():
-            tab_data["label"].text = ""
-            tab_data["label"].bind(texture_size=lambda instance, value: self.update_label_height(instance))
-            Clock.schedule_once(lambda dt, t_id=tab_id: self.animate_text(t_id), 0.023)
+            user_data_store.put("credentials", uid=uid, id_token=new_id_token, refresh_token=new_refresh_token)
+            return new_id_token, uid
 
-        # Schedule re-enabling the button after every 24hrs
-        Clock.schedule_once(lambda dt: self.enable_button(), 24 * 60 * 60)
-
-    def animate_text(self, tab_id, step=0):
-        """Animates text chat-gpt style"""
-        insight_text = self.tab_insights[tab_id]["text"]
-        label = self.tab_insights[tab_id]["label"]
-
-        if step < len(insight_text):
-            label.text += insight_text[step]
-            Clock.schedule_once(lambda dt: self.animate_text(tab_id, step + 1), 0.023)
-
-    def enable_button(self):
-        """Re-enables the generate_insight button after a cooldown of 24hrs"""
-        self.root.get_screen("insight_screen1").ids.generate_button.disabled = False
-        self.root.get_screen("insight_screen1").ids.generate_button.text = "Generate Insights"
-        self.root.get_screen("insight_screen1").ids.btn_bg.md_bg_color = self._white
-        self.root.get_screen("insight_screen1").ids.btn_bg.radius = dp(11.5)
-
-    @staticmethod
-    def update_label_height(label):
-        """Adjusts the height of the label dynamically based on its content."""
-        label.height = label.texture_size[1]
-        label.size_hint_y = None
+        except Exception as e:
+            self.show_snackbar(text="Failed to refresh token!")
+            if self.screen_manager.current == "no_internet_screen":
+                NoInternetScreen().show_no_internet()
+            return None, None
 
 
 if __name__ == "__main__":
