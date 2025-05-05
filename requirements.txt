@@ -5,13 +5,9 @@ kivymd-extensions
 kivymd-extensions.akivymd
 asynckivy
 asyncgui
-certifi
 requests
-openai
-typing_extensions
+certifi
 regex
-datetime
-python-calendar
 plyer
 pyjnius
 android

@@ -1,4 +1,5 @@
 
+import threading
 from kivy.app import App
 from kivy.lang import Builder
 from kivymd.uix.screen import MDScreen
@@ -76,6 +77,15 @@ KV = """
                 on_release:
                     root.signin() if len(signin_mail.text) >= 6 and len(signin_pass.text) >= 6 else None
 
+                MDSpinner:
+                    id: signin_spinner
+                    size_hint: (None, None)
+                    size: dp(23), dp(23)
+                    pos_hint: {"center_x": .5, "center_y": .5}
+                    line_width: 3
+                    color: .6, .6, 1, 1
+                    active: False
+
         MDBoxLayout:
 
 """
@@ -99,39 +109,60 @@ class SignInScreen(MDScreen):
         self.refresh_token = None
 
     def signin(self):
-        email, password = self.ids.signin_mail.text, self.ids.signin_pass.text
+        self.ids.signin_spinner.active = True
+        threading.Thread(target=self.signin_thread, daemon=True).start()
+
+    def signin_thread(self):
+        email = self.ids.signin_mail.text
+        password = self.ids.signin_pass.text
 
         try:
             user = self.firebase.signin(email=email, password=password)
 
             if "localId" not in user or "idToken" not in user or "refreshToken" not in user:
-                raise ValueError("Invalid response from Firebase")
+                Clock.schedule_once(lambda dt: self._show_error("Firebase response error."))
+                return
 
             self.u_id = user["localId"]
             self.id_token = user["idToken"]
             self.refresh_token = user["refreshToken"]
             self.user_data_store.put("credentials", uid=self.u_id, id_token=self.id_token, refresh_token=self.refresh_token)
 
-            Clock.schedule_once(lambda dt: self.show_snackbar("Successfully logged in!", background=self._green), 0)
-            self.ids.signin_mail.text = ""
-            self.ids.signin_pass.text = ""
+            Clock.schedule_once(lambda dt: self.show_snackbar("Successfully signed in!", background=self._green))
+            Clock.schedule_once(lambda dt: self.clear_inputs())
 
-            full_name = self.firebase.get_data(id_token=self.id_token, path=f"users/{self.u_id}/user_profile")["Full name"]
-            email = self.firebase.get_data(id_token=self.id_token, path=f"users/{self.u_id}/user_profile")["Email Address"]
-            self.update_ui(name=full_name, email=email)
-            App.get_running_app().load_user_data(id_token=self.id_token, uid=self.u_id, full_name=full_name)
-            Clock.schedule_once(lambda dt: self.go_to_home(), 4)
+            try:
+                profile = self.firebase.get_data(id_token=self.id_token, path=f"users/{self.u_id}/user_profile")
+                full_name = profile.get("Full name", "User")
+                email = profile.get("Email Address", "")
+            except Exception:
+                Clock.schedule_once(lambda dt: self._show_error("Failed to fetch profile info."))
+                return
 
-            return True
+            Clock.schedule_once(lambda dt: self.update_ui(name=full_name, email=email))
+            Clock.schedule_once(lambda dt: App.get_running_app().load_user_data(id_token=self.id_token, uid=self.u_id, full_name=full_name))
+            Clock.schedule_once(lambda dt: self.go_to_home(), 2)
 
         except HTTPError as e:
             try:
-                error_msg = e.response.json()['error']['message']
-                snackbar_msg = self.firebase.get_firebase_error_msg(error_msg)
-                self.show_snackbar(text=snackbar_msg)
-            except: self.show_snackbar(text="Failed to parse Firebase error!")
-        except (ConnectionError, Timeout): self.show_snackbar(text="No internet connection!")
-        except Exception: self.show_snackbar(text="An unexpected error occurred!")
+                msg = e.response.json()['error']['message']
+                error_msg = self.firebase.get_firebase_error_msg(msg)
+                Clock.schedule_once(lambda dt: self._show_error(error_msg))
+            except Exception:
+                Clock.schedule_once(lambda dt: self._show_error("Failed to parse Firebase error!"))
+        except (ConnectionError, Timeout):
+            Clock.schedule_once(lambda dt: self._show_error("No internet connection!"))
+        except Exception:
+            Clock.schedule_once(lambda dt: self._show_error("An unexpected error occurred!"))
+
+    def _show_error(self, message):
+        self.show_snackbar(text=message)
+        self.ids.signin_spinner.active = False
+
+    def clear_inputs(self):
+        self.ids.signin_mail.text = ""
+        self.ids.signin_pass.text = ""
+        self.ids.signin_spinner.active = False
 
     def open_password_reset_dialog(self):
         self.input_dialog = CustomInputDialog()
@@ -142,8 +173,10 @@ class SignInScreen(MDScreen):
             self.firebase.send_password_reset_email(email=email)
             Clock.schedule_once(lambda dt: self.show_snackbar("Password Reset Link sent to your email!", background=self._green), 2)
             self.input_dialog.dismiss()
-        except (ConnectionError, Timeout): self.show_snackbar("No internet connection!")
-        except Exception: self.show_snackbar("An unexpected error occurred!")
+        except (ConnectionError, Timeout):
+            Clock.schedule_once(lambda dt: self.show_snackbar("No internet connection!"), 0)
+        except Exception:
+            Clock.schedule_once(lambda dt: self.show_snackbar("An unexpected error occurred!"), 0)
 
     @staticmethod
     def go_to_home():

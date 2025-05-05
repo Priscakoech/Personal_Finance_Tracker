@@ -85,13 +85,13 @@ class PersonalFinanceTrackerApp(MDApp):
         self.firebase = FirebaseREST()
 
         self.screen_manager = MDScreenManager(transition=FadeTransition(duration=.2, clearcolor=self._dark))
-        self.screen_manager.add_widget(HomeScreen(user_data_store=user_data_store, text_insights_store=text_insights_store))
+        self.screen_manager.add_widget(HomeScreen(user_data_store=user_data_store, firebase=self.firebase, text_insights_store=text_insights_store))
         self.screen_manager.add_widget(OnboardingScreen(store=user_data_store, firebase=self.firebase, show_snackbar=self.show_snackbar, update_ui=self.update_ui))
         self.screen_manager.add_widget(PrivacyPolicyScreen())
         self.screen_manager.add_widget(TermsOfUseScreen())
-        self.screen_manager.add_widget(WalletSetupScreen(store=user_data_store, firebase=self.firebase, uid=self.uid, id_token=self.id_token, show_snackbar=self.show_snackbar, hide_card=self.hide_card, card_to_show_or_hide=self.card_to_show_or_hide))
+        self.screen_manager.add_widget(WalletSetupScreen(store=user_data_store, firebase=self.firebase, show_snackbar=self.show_snackbar, hide_card=self.hide_card, card_to_show_or_hide=self.card_to_show_or_hide))
         self.screen_manager.add_widget(TransactionsScreen())
-        self.screen_manager.add_widget(TransactionKBScreen())
+        self.screen_manager.add_widget(TransactionKBScreen(firebase=self.firebase, user_data_store=user_data_store))
         self.screen_manager.add_widget(SettingsScreen(store=user_data_store, snackbar=self.show_snackbar))
         self.screen_manager.add_widget(PersonalInfoScreen(store=user_data_store, snackbar=self.show_snackbar))
         self.screen_manager.add_widget(ReportsScreen())
@@ -141,23 +141,27 @@ class PersonalFinanceTrackerApp(MDApp):
         prev_key = f"account_{prev_number}"
         transactions = self.firebase.get_data(id_token=id_token, path=f"users/{uid}/raw_data/{prev_key}")
         user_phone = self.firebase.get_data(id_token=id_token, path=f"users/{uid}/raw_data/{prev_key}")["Account ID"]
+        user_data_store.put("user_phone", user_phone=user_phone)
 
         if transactions and "Transactions" in transactions: transactions = transactions["Transactions"]
         else: transactions = []
 
-        existing_kb = self.firebase.get_data(
-            id_token=id_token,
-            path=f"users/{uid}/knowledge_base"
-        )
+        try:
+          existing_kb = self.firebase.get_data(
+              id_token=id_token,
+              path=f"users/{uid}/knowledge_base"
+          )
+        except Exception: existing_kb = {}
 
         knowledge_base = {}
+
         if existing_kb and "Knowledge Base" in existing_kb:
             knowledge_base = existing_kb["Knowledge Base"]
 
         self.data_handler.parser = MpesaMessageParser(
             raw_data=transactions,
             user_name=full_name.capitalize(),
-            user_phone=user_phone,
+            user_data_store=user_data_store,
             firebase=self.firebase, id_token=id_token, uid=uid,
             knowledge_base=knowledge_base
         )
@@ -190,11 +194,12 @@ class PersonalFinanceTrackerApp(MDApp):
         pi_screen.ids.pi_mail.text = f"[color=a6a6a6][size=14dp][b]Email address[/b][/size][/color]\n{self.email_address}"
 
     def start_message_listener(self):
-        Clock.schedule_interval(self.get_new_mpesa_messages, 36)
+        Clock.schedule_interval(self.get_new_mpesa_messages, 360)
 
     def get_new_mpesa_messages(self, dt):
         wallet_setup_screen = App.get_running_app().root.get_screen("wallet_setup_screen")
-        wallet_setup_screen.fetch_mpesa_messages()
+        if user_data_store.exists("mpesa_acc_was_added") and user_data_store.get("mpesa_acc_was_added")["status"] == True:
+            wallet_setup_screen.fetch_mpesa_messages(silent=True)
 
     def go_back(self):
         if self.root.current == "home_screen":
@@ -211,7 +216,7 @@ class PersonalFinanceTrackerApp(MDApp):
 
     def on_keyboard(self, window, key, *args):
         if key == 27 or key == 1001:
-            if self.root.current == "welcome_screen" or self.root.current == "onboarding_screen" or self.root.get_screen("home_screen").ids.bottom_nav.current == "home_tab":
+            if self.root.current == "wallet_setup_screen" or self.root.current == "welcome_screen" or self.root.current == "onboarding_screen" or self.root.get_screen("home_screen").ids.bottom_nav.current == "home_tab":
                 return False
             self.go_back()
             return True

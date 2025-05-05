@@ -1,7 +1,7 @@
 
 import requests
 
-FIREBASE_CONFIG = {} # Enter your firebase config here
+FIREBASE_CONFIG = {} # <-- YOUR FIREBASE RESTAPI CONFIG
 
 
 class FirebaseREST:
@@ -44,7 +44,7 @@ class FirebaseREST:
             "refresh_token": refresh_token
         }
         res = requests.post(url, data=payload)
-        
+
         if "error" in res.json():
             raise requests.exceptions.HTTPError(response=res)
 
@@ -59,16 +59,15 @@ class FirebaseREST:
 
         return res.json()
 
-
     def get_data(self, id_token: str, path: str):
         url = f"{self.database_url}/{path}.json?auth={id_token}"
         try:
             res = requests.get(url, timeout=10)
-            res.raise_for_status()  # raises HTTPError for bad status
+            res.raise_for_status()
 
             data = res.json()
             if data is None:
-                return {}  # Firebase path exists but has no content
+                return {}
 
             if isinstance(data, dict) and "error" in data:
                 raise Exception(f"Firebase error: {data['error']}")

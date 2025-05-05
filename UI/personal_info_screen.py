@@ -1,4 +1,5 @@
 
+from kivy.app import App
 from kivy.lang import Builder
 from kivymd.uix.screen import MDScreen
 from kivy.clock import Clock
@@ -125,28 +126,26 @@ class PersonalInfoScreen(MDScreen):
         self.show_snackbar = snackbar
 
     def open_file_dialog(self):
-        def _launch_file_chooser():
-            def on_file_selected(file_path):
-                self.profile_photo = file_path
+        if platform == "android":
+            from android.permissions import Permission, check_permission, request_permissions
+            if check_permission(Permission.READ_MEDIA_IMAGES): self._launch_file_chooser()
+            else:
+                request_permissions(
+                    [Permission.READ_MEDIA_IMAGES], 
+                    self.on_file_permission_granted
+                )
+        else: self._launch_file_chooser()
+
+    def on_file_permission_granted(self, permissions, grants):
+        if grants: Clock.schedule_once(lambda dt: self._launch_file_chooser(), 0)
+        else:
+            Clock.schedule_once(lambda dt: self.show_snackbar(text="App can't access device's media storage."), 0)
+
+    def _launch_file_chooser(self):
+        def on_file_selected(file_path):
+            if file_path:
+                App.get_running_app().profile_photo = file_path
                 self.user_data_store.put("profile_photo", location=file_path)
 
-            dialog = FileChooserDialog(on_select_callback=on_file_selected)
-            Clock.schedule_once(lambda dt: dialog.open(), 0.3)
-
-        if platform == "android":
-            from android.permissions import check_permission, request_permissions, Permission # type: ignore
-            read_granted = check_permission(Permission.READ_EXTERNAL_STORAGE)
-            write_granted = check_permission(Permission.WRITE_EXTERNAL_STORAGE)
-
-            if read_granted and write_granted: _launch_file_chooser()
-            else:
-                def permission_callback(permissions, grants):
-                    if all(grants): _launch_file_chooser()
-                    else: self.show_snackbar(text="Please Enable storage access in settings.")
-
-                request_permissions(
-                    [Permission.READ_EXTERNAL_STORAGE, Permission.WRITE_EXTERNAL_STORAGE],
-                    permission_callback
-                )
-
-        else: _launch_file_chooser()
+        dialog = FileChooserDialog(on_select_callback=on_file_selected)
+        Clock.schedule_once(lambda dt: dialog.open(), 0.3)

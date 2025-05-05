@@ -8,15 +8,10 @@ from kivy.uix.screenmanager import FadeTransition
 from kivymd.uix.screen import MDScreen
 from UI.text_insight_screen import InsightScreen1
 from UI.visual_insight_screen import InsightScreen2
-from UI.reusables import CustomPieChart, CustomTwoLineListItem, KeyItem, CustomLabel, NavIconButton, WidgetContainer, LeftIconContainer, RightArrow, TopLeftBackButton # noqa
-from BACKEND.data_handler import DataHandler
+from UI.reusables import CustomPieChart, CustomTwoLineListItem, KeyItem, CustomLabel, TopLeftBackButton # noqa
 # The "# noqa" comment suppresses the 'UNUSED IMPORT' Warnings! 🙂🙂
 
 KV = """
-<MySwiper@MDSwiperItem>
-    md_bg_color: app._lightgray
-    radius: dp(11.5)
-
 <HomeScreen>:
     name: "home_screen"
     md_bg_color: app._dark
@@ -78,6 +73,26 @@ KV = """
                             bold: True
 
                     MDBoxLayout:
+                        md_bg_color: app._lightgray
+                        size_hint: (None, None)
+                        size: ("35dp", "35dp")
+                        radius: self.height / 2
+                        pos_hint: {"center_y": .5}
+                        line_color: app._light
+
+                        MDIconButton:
+                            size_hint: (1, 1)
+                            _no_ripple_effect: True
+                            icon:  "assets/images/reports_icon.png"
+                            icon_size: "23dp"
+                            pos_hint: {"center_x": .5, "center_y": .5}
+                            on_release: app.switch_screen("reports_screen")
+
+                    MDBoxLayout:
+                        size_hint: (None, None)
+                        size: ("11.5dp", "11.5dp")
+
+                    MDBoxLayout:
                         size_hint: (None, None)
                         size: ("38dp", "38dp")
                         pos_hint: {"center_y": .5}
@@ -98,7 +113,7 @@ KV = """
                     MDBoxLayout:
                         md_bg_color: app._lightgray
                         size_hint: (.95, None)
-                        height: dp(75)
+                        height: dp(80)
                         pos_hint: {"center_x": .5}
                         radius: dp(11.5)
                         padding: dp(6.3)
@@ -135,15 +150,20 @@ KV = """
 
                     MDBoxLayout:
                         size_hint: (1, None)
-                        height: dp(230)
+                        height: dp(240)
                         pos_hint: {"center_x": .5}
                         radius: dp(0)
 
                         MDSwiper:
                             size_hint: (1, 1)
                             items_spacing: dp(11.5)
+                            do_scroll_x: True
+                            do_scroll_y: False
 
-                            MySwiper:
+                            MDSwiperItem:
+                                md_bg_color: app._lightgray
+                                radius: dp(11.5)
+
                                 MDBoxLayout:
                                     orientation: "horizontal"
                                     padding: dp(6)
@@ -213,7 +233,10 @@ KV = """
 
                                             MDBoxLayout:
 
-                            MySwiper:
+                            MDSwiperItem:
+                                md_bg_color: app._lightgray
+                                radius: dp(11.5)
+
                                 MDBoxLayout:
                                     orientation: "horizontal"
                                     padding: dp(6)
@@ -288,7 +311,7 @@ KV = """
                         md_bg_color: app._green
                         background: "assets/images/bg5.jpg"
                         size_hint: (.95, None)
-                        height: dp(175)
+                        height: dp(180)
                         pos_hint: {"center_x": .5}
                         radius: dp(23)
                         padding: dp(11.5)
@@ -307,22 +330,28 @@ KV = """
                             MDBoxLayout:
                                 md_bg_color: app._invisible
                                 size_hint: (None, 1)
-                                width: "123dp"
+                                width: "117dp"
 
                                 MDCard:
                                     md_bg_color: app._invisible
                                     size: (1, 1)
+                                    line_color: app._blue
+                                    radius: dp(36)
+                                    size_hint_y: None
+                                    height: dp(34)
+                                    pos_hint: {"center_y": .5}
                                     on_release: app.switch_screen("transactions_screen")
 
                                     CustomLabel:
                                         padding: dp(6)
-                                        text: "[b]View all[/b]"
+                                        text: "[b]View all  [/b]"
                                         halign: "right"
                                         text_color: app._gray
 
                                     MDIcon:
                                         icon: "chevron-right"
                                         halign: "right"
+                                        padding: dp(6), dp(0), dp(6), dp(0)
                                         pos_hint: {"center_y": .5}
                                         theme_text_color: "Custom"
                                         text_color: app._gray
@@ -343,25 +372,7 @@ KV = """
                                 id: recent_tx_data
                                 opacity: 1
 
-                    WidgetContainer:
-                        md_bg_color: "#aaaaaa26"
-                        size_hint_x: .95
-                        size_hint_max_y: dp(70)
-                        pos_hint: {"center_x": .5}
-                        on_release: app.switch_screen("reports_screen")
-                        padding: dp(6), dp(6), dp(16), dp(6)
-
-                        LeftIconContainer:
-                            Image:
-                                source:  "assets/images/reports_icon.png"
-                                pos_hint: {"center_x": .5, "center_y": .5}
-                                size_hint: (.53, .63)
-
-                        MDBoxLayout:
-                            CustomLabel:
-                                text: " [b]Financial Reports[/b]"
-
-                        RightArrow:
+                    MDBoxLayout:    
 
         MDBottomNavigationItem:
             name: "wallet_tab"
@@ -650,40 +661,50 @@ class HomeScreen(MDScreen):
     kes_user_balance, usd_user_balance = NumericProperty(0.00), NumericProperty(0.00)
     total_expenditure, total_income = NumericProperty(0.00), NumericProperty(0.00)
 
-    def __init__(self, user_data_store=None, text_insights_store=None, **kwargs):
+    def __init__(self, user_data_store=None, firebase=None, text_insights_store=None, **kwargs):
         super().__init__(**kwargs)
         self._dark = "#00001fff"
         self.user_data_store = user_data_store
         self.text_insights_store = text_insights_store
-        self.firebase = None
+        self.firebase = firebase
         self.id_token = None
         self.u_id = None
 
     def on_enter(self, *args):
-        try:
-            Clock.schedule_once(lambda dt: self.load_recent_transaction(), 0)
-            Clock.schedule_once(lambda dt: self.load_wallets(), 0)
-            Clock.schedule_once(lambda dt: self.load_spending_income_totals(), 0)
-            Clock.schedule_once(lambda dt: self.refresh_piecharts(), 0)
-            if not hasattr(self, 'insight_screens_loaded'):
-                self.ids.insight_section_screen_manager.add_widget(InsightScreen1(data_handler=DataHandler(), user_data_store=self.user_data_store, text_insights_store=self.text_insights_store))
-                self.ids.insight_section_screen_manager.add_widget(InsightScreen2())
-                self.insight_screens_loaded = True
+        self.id_token = self.user_data_store.get("credentials")["id_token"] if self.user_data_store.exists("credentials") else None
+        self.u_id = self.user_data_store.get("credentials")["uid"] if self.user_data_store.exists("credentials") else None
 
-        except Exception: pass
+        app = App.get_running_app()
+
+        def safe_load(dt):
+            try:
+                if not all([self.firebase, self.id_token, self.u_id]):
+                    Clock.schedule_once(safe_load, 3)
+                else:
+                    self.load_recent_transaction()
+                    self.load_wallets()
+                    self.load_spending_income_totals()
+                    self.refresh_piecharts()
+
+            except Exception: pass
+
+        Clock.schedule_once(safe_load, 0)
+
+        if not hasattr(self, 'insight_screens_loaded'):
+            self.ids.insight_section_screen_manager.add_widget(
+                InsightScreen1(data_handler=app.data_handler, user_data_store=self.user_data_store, firebase=self.firebase, text_insights_store=self.text_insights_store)
+            )
+            self.ids.insight_section_screen_manager.add_widget(
+                InsightScreen2(user_data_store=self.user_data_store, firebase=self.firebase)
+            )
+            self.insight_screens_loaded = True
 
     def refresh_piecharts(self):
+        self.id_token = self.user_data_store.get("credentials")["id_token"] if self.user_data_store.exists("credentials") else None
+        self.u_id = self.user_data_store.get("credentials")["uid"] if self.user_data_store.exists("credentials") else None
+
         def fetch_data():
-            app = App.get_running_app()
-            parser = app.data_handler.parser
-            self.firebase = parser.firebase
-            self.id_token = parser.id_token
-            self.u_id = parser.u_id
-
-            if not all([self.firebase, self.id_token, self.u_id]):
-                print("Missing Firebase credentials.")
-                return
-
+            if not all([self.firebase, self.id_token, self.u_id]): return
             try:
                 parsed_data = self.firebase.get_data(
                     id_token=self.id_token,
@@ -763,11 +784,7 @@ class HomeScreen(MDScreen):
         else: pass
 
     def load_spending_income_totals(self):
-        app = App.get_running_app()
-        parser = app.data_handler.parser
-        self.firebase = parser.firebase
-        self.id_token = parser.id_token
-        self.u_id = parser.u_id
+        if not all([self.firebase, self.id_token, self.u_id]): return
         try:
             parsed_data = self.firebase.get_data(
                 id_token=self.id_token,

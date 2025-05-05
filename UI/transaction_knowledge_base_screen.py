@@ -157,17 +157,20 @@ Builder.load_string(KV)
 
 
 class TransactionKBScreen(MDScreen):
-    def __init__(self, **kwargs):
+    def __init__(self, firebase=None, user_data_store=None, **kwargs):
         super().__init__(**kwargs)
         self._green = "#2fc46c"
         self.menu = None
         self.knowledge_base = {}
+        self.user_data_store = user_data_store
 
-        self.firebase = None
+        self.firebase = firebase
         self.id_token = None
         self.u_id = None
 
     def on_pre_enter(self):
+        self.id_token = self.user_data_store.get("credentials")["id_token"] if self.user_data_store.exists("credentials") else None
+        self.u_id = self.user_data_store.get("credentials")["uid"] if self.user_data_store.exists("credentials") else None
         try: self.load_knowledge_base()
         except Exception: pass
 
@@ -269,14 +272,12 @@ class TransactionKBScreen(MDScreen):
     def update_knowledge_base_in_firebase(self):
         app = App.get_running_app()
         parser = app.data_handler.parser
-        self.firebase = parser.firebase
-        self.id_token = parser.id_token
-        self.u_id = parser.u_id
 
         def update():
-            if not all([self.firebase, self.id_token, self.u_id]):
-                print("Missing Firebase credentials.")
-                return
+            self.id_token = self.user_data_store.get("credentials")["id_token"] if self.user_data_store.exists("credentials") else None
+            self.u_id = self.user_data_store.get("credentials")["uid"] if self.user_data_store.exists("credentials") else None
+        
+            if not all([self.firebase, self.id_token, self.u_id]): return
 
             if self.firebase and self.id_token and self.u_id:
                 try:

@@ -115,7 +115,6 @@ class OnboardingScreen(MDScreen):
         self.show_snackbar = show_snackbar
         self.update_ui = update_ui
 
-
     def on_enter(self, *args):
         if not hasattr(self, 'onboarding_screens_loaded'):
             signin_screen = SignInScreen(

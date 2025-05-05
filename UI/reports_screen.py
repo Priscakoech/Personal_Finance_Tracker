@@ -2,6 +2,7 @@
 from kivy.app import App
 from kivy.utils import platform
 from kivy.lang import Builder
+from kivy.clock import Clock
 from kivymd.uix.screen import MDScreen
 from UI.reusables import TopLeftBackButton, GridCard, CustomLabel, HiddenCard, HiddenCardReportsContent, DownloadReportButton, CloseCardButton # noqa
 # The "# noqa" comment suppresses the 'UNUSED IMPORTS' Warnings! 🙂🙂
@@ -298,25 +299,21 @@ class ReportsScreen(MDScreen):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._green = "#2fc46c"
+        self.parser = None
+
+    def on_enter(self):
+        app = App.get_running_app()
+        self.parser = app.data_handler.parser
 
     def _download_report(self, csv_type):
         app = App.get_running_app()
-        parser = app.data_handler.parser
-        filepath = parser.export_to_csv(csv_type=csv_type)
+        self.parser = app.data_handler.parser
+        filepath = self.parser.export_to_csv(csv_type=csv_type)
 
         if filepath:
-            app.show_snackbar(text=f"pft_{csv_type}_report Downloaded Successfully!", background=self._green)
+             Clock.schedule_once(lambda dt: app.show_snackbar(text=f"pft_{csv_type}_report Downloaded Successfully!", background=self._green), 1)
         else:
-            app.show_snackbar(text="Download failed. Try again.")
+             Clock.schedule_once(lambda dt: app.show_snackbar(text="Download failed. Try again."), 1)
 
     def on_download_report_pressed(self, csv_type):
-        if platform == "android":
-            from android.permissions import request_permissions, Permission, check_permission # type: ignore
-            if check_permission(Permission.WRITE_EXTERNAL_STORAGE): self._download_report(csv_type)
-            else:
-                def callback(permissions, grants):
-                    if Permission.WRITE_EXTERNAL_STORAGE in permissions and grants[0]: self._download_report(csv_type)
-                    else: App.get_running_app().show_snackbar(text="Storage permission denied.")
-                request_permissions([Permission.WRITE_EXTERNAL_STORAGE], callback)
-
-        else: self._download_report(csv_type)
+        self._download_report(csv_type)

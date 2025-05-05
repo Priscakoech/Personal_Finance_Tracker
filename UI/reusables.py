@@ -99,19 +99,6 @@ REUSABLES = """
         CustomLabel:
             text: f"[size=12dp]{root.key_text}[/size]"
 
-<SlideIndicator>:
-    md_bg_color: app._gray
-    size_hint: (None, None)
-    size: ("7.63dp", "7.63dp")
-    pos_hint: {"center_y": .5}
-    radius: self.height / 2
-
-<NavIconButton>:
-    _no_ripple_effect: True
-    md_bg_color: app._invisible
-    size_hint: (1, 1)
-    pos_hint: {"center_y": .5}
-
 <WidgetContainer>:
     md_bg_color: app._tinted
     size_hint: (.9, .085)
@@ -881,14 +868,6 @@ class KeyItem(MDBoxLayout):
     key_color, key_text = ColorProperty(), StringProperty()
 
 
-class SlideIndicator(MDCard):
-    pass
-
-
-class NavIconButton(MDIconButton):
-    pass
-
-
 class WidgetContainer(MDCard):
     pass
 
@@ -1107,7 +1086,7 @@ class CustomInputDialog(ModalView):
         super().__init__(**kwargs)
         self.background_color = "#0001ffff"
         self.overlay_color = "#36363622"
-        self.size_hint = (.95, .6)
+        self.size_hint = (.95, .7)
         self.auto_dismiss = True
         content = CustomInputDialogContent()
 

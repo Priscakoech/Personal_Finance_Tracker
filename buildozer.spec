@@ -37,7 +37,7 @@ version = 1.0
 
 # (list) Application requirements
 # comma separated e.g. requirements = sqlite3,kivy
-requirements = python3,kivy,kivymd==1.1.1,openai,anyio,distro,httpx,jiter,pydantic,sniffio,tqdm,typing-extensions,idna,certifi,httpcore,h11,annotated-types,pydantic-core,colorama,requests,akivymd,kivymd-extensions,kivymd-extensions.akivymd,regex,datetime,python-calendar,plyer,pyjnius,android,asynckivy,asyncgui,cffi,exceptiongroup,python-dateutil,pytz,six,sniffio,types-pytz,tzdata,websockets,pycparser
+requirements = python3,kivy,kivymd==1.1.1,akivymd,kivymd-extensions,kivymd-extensions.akivymd,asynckivy,asyncgui,requests,certifi,regex,plyer,pyjnius,android
 
 # (str) Custom source folders for requirements
 # Sets custom source for any requirements with recipes
@@ -96,7 +96,7 @@ android.presplash_color = #00001F
 # (list) Permissions
 # (See https://python-for-android.readthedocs.io/en/latest/buildoptions/#build-options-1 for all the supported syntaxes and properties)
 # Permissions for internet access and file management
-android.permissions = INTERNET, ACCESS_NETWORK_STATE, READ_SMS, RECEIVE_SMS, WRITE_EXTERNAL_STORAGE, READ_EXTERNAL_STORAGE, MANAGE_EXTERNAL_STORAGE
+android.permissions = INTERNET, ACCESS_NETWORK_STATE, READ_SMS, RECEIVE_SMS, WRITE_EXTERNAL_STORAGE, READ_EXTERNAL_STORAGE, MANAGE_EXTERNAL_STORAGE, READ_MEDIA_IMAGES
 
 # (list) features (adds uses-feature -tags to manifest)
 #android.features = android.hardware.usb.host
@@ -234,7 +234,7 @@ android.minapi = 23
 #android.ouya.icon.filename = %(source.dir)s/data/ouya_icon.png
 
 # (str) XML file to include as an intent filters in <activity> tag
-android.manifest.intent_filters = intents.xml
+# android.manifest.intent_filters = intents.xml
 
 # (list) Copy these files to src/main/res/xml/ (used for example with intent-filters)
 #android.res_xml = PATH_TO_FILE,

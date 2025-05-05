@@ -2,7 +2,6 @@
 import random
 import threading
 from datetime import datetime, timedelta
-from kivy.app import App
 from kivy.lang import Builder
 from kivy.clock import Clock
 from kivy.metrics import dp
@@ -146,11 +145,11 @@ Builder.load_string(KV)
 
 
 class InsightScreen1(MDScreen):
-    def __init__(self, data_handler=None, user_data_store=None, text_insights_store=None, **kwargs):
+    def __init__(self, data_handler=None, user_data_store=None, firebase=None, text_insights_store=None, **kwargs):
         super().__init__(**kwargs)
         self._white = "#dddddd"
         self.data_handler = data_handler
-        self.firebase = None
+        self.firebase = firebase
         self.id_token = None
         self.u_id = None
         self.user_data_store = user_data_store
@@ -162,7 +161,9 @@ class InsightScreen1(MDScreen):
         ]
 
     def on_enter(self, *args):
-        Clock.schedule_once(lambda dt: self.check_insight_cooldown(), 6)
+        self.id_token = self.user_data_store.get("credentials")["id_token"] if self.user_data_store.exists("credentials") else None
+        self.u_id = self.user_data_store.get("credentials")["uid"] if self.user_data_store.exists("credentials") else None
+        Clock.schedule_once(lambda dt: self.check_insight_cooldown(), 3)
         self.load_saved_insights()
         if not hasattr(self, 'insights_initialized'):
             self.prepare_insight_tabs()
@@ -191,7 +192,7 @@ class InsightScreen1(MDScreen):
         for tab_id, tab_data in self.tab_insights.items():
             tab_data["label"].text = ""
             tab_data["label"].bind(texture_size=lambda instance, value: self.update_label_height(instance))
-            Clock.schedule_once(lambda dt, t_id=tab_id: self.animate_text(t_id), 0.000023)
+            Clock.schedule_once(lambda dt, t_id=tab_id: self.animate_text(t_id), 0.00000023)
 
         # Re-enable button after 24hrs
         Clock.schedule_once(lambda dt: self.enable_button(), 24 * 60 * 60)
@@ -202,7 +203,7 @@ class InsightScreen1(MDScreen):
 
         if step < len(insight_text):
             label.text += insight_text[step]
-            Clock.schedule_once(lambda dt: self.animate_text(tab_id, step + 1), 0.000023)
+            Clock.schedule_once(lambda dt: self.animate_text(tab_id, step + 1), 0.00000023)
 
     def enable_button(self):
         self.ids.generate_button.disabled = False
@@ -228,16 +229,9 @@ class InsightScreen1(MDScreen):
         self.ids.insight_gen_spinner.active = False
 
     def try_generate_next_insight(self, *args):
-        app = App.get_running_app()
-        parser = app.data_handler.parser
-        self.firebase = parser.firebase
-        self.id_token = parser.id_token
-        self.u_id = parser.u_id
-
-        if not all([self.firebase, self.id_token, self.u_id]):
-                print("Missing Firebase credentials.")
-                return
-
+        self.id_token = self.user_data_store.get("credentials")["id_token"] if self.user_data_store.exists("credentials") else None
+        self.u_id = self.user_data_store.get("credentials")["uid"] if self.user_data_store.exists("credentials") else None
+        if not all([self.firebase, self.id_token, self.u_id]): return
         try:
             all_insights = self.firebase.get_data(
                 id_token=self.id_token,
@@ -335,11 +329,10 @@ class InsightScreen1(MDScreen):
 
         if step < len(insight_text):
             label.text += insight_text[step]
-            Clock.schedule_once(lambda dt: self.animate_single_tab(tab_id, step + 1), 0.000023)
+            Clock.schedule_once(lambda dt: self.animate_single_tab(tab_id, step + 1), 0.00000023)
 
     def on_generate_button_pressed(self):
-        if self.ids.generate_button.disabled:
-            return  # protect double clicks
+        if self.ids.generate_button.disabled: return
 
         for tab_id, tab_data in self.tab_insights.items():
             tab_data["label"].text = ""

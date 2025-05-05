@@ -312,21 +312,28 @@ class InsightScreen2(MDScreen):
     yi_cat_val5 = NumericProperty(0.00)
 
 
-    def __init__(self, **kwargs):
+    def __init__(self, user_data_store=None, firebase=None, **kwargs):
         super().__init__(**kwargs)
         self._red, self._green, self._light, self._invisible = "#ff2f3f", "#2fc46c", "#c800f0", (1, 1, 1, 0)
         self.current_month_num_of_days = monthrange(datetime.today().year, datetime.today().month)[1]
+        self.user_data_store = user_data_store
+        self.firebase = firebase
+        self.id_token = None
+        self.u_id = None
 
     def on_enter(self):
-        threading.Thread(target=self.load_visual_insights).start()
+        self.id_token = self.user_data_store.get("credentials")["id_token"] if self.user_data_store.exists("credentials") else None
+        self.u_id = self.user_data_store.get("credentials")["uid"] if self.user_data_store.exists("credentials") else None
+        threading.Thread(target=self.load_visual_insights, daemon=True).start()
 
     def load_visual_insights(self):
-        app = App.get_running_app()
-        parser = app.data_handler.parser
+        self.id_token = self.user_data_store.get("credentials")["id_token"] if self.user_data_store.exists("credentials") else None
+        self.u_id = self.user_data_store.get("credentials")["uid"] if self.user_data_store.exists("credentials") else None
+        if not all([self.firebase, self.id_token, self.u_id]): return
         try:
-            data = parser.firebase.get_data(
-                id_token=parser.id_token,
-                path=f"users/{parser.u_id}/parsed_data/mpesa_account/All Insights"
+            data = self.firebase.get_data(
+                id_token=self.id_token,
+                path=f"users/{self.u_id}/parsed_data/mpesa_account/All Insights"
             )
 
             if not data:

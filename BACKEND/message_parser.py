@@ -12,7 +12,7 @@ from kivy.utils import platform
 
 
 class MpesaMessageParser:
-    def __init__(self, raw_data: list, user_name=None, user_phone=None, firebase=None, id_token=None, uid=None, knowledge_base=None):
+    def __init__(self, raw_data: list, user_name=None, user_data_store=None, firebase=None, id_token=None, uid=None, knowledge_base=None):
         self.firebase = firebase
         self.id_token = id_token
         self.u_id = uid
@@ -29,7 +29,8 @@ class MpesaMessageParser:
         self.formatted_transactions = []
 
         self.all_messages = raw_data
-        self.user_name, self.user_phone = user_name, user_phone
+        self.user_name, self.user_phone = user_name, ""
+        self.user_data_store = user_data_store
         self.daily_expenses = 0
         self.daily_income = 0
         self.expense_categories = {cat: 0 for cat in ["Friends & Family", "Housing", "Utilities", "Groceries", "Miscellaneous"]}
@@ -53,6 +54,7 @@ class MpesaMessageParser:
         return None
 
     def format_transaction(self, msg):
+        self.user_phone = self.user_data_store.get("user_phone")["user_phone"] if self.user_data_store.exists("user_phone") else ""
         user_acc = f"{self.user_phone}\n{self.user_name}"
         tx_data = {
             "sr_name": "Unknown",
@@ -448,7 +450,6 @@ class MpesaMessageParser:
             "Income": to_percentages(income_categories)
         }
 
-
     def save_parsed_data_to_firebase(self, formatted_data):
         if not all([self.firebase, self.id_token, self.u_id]):
             print("Missing Firebase credentials")
@@ -496,6 +497,7 @@ class MpesaMessageParser:
             return kb
 
     def get_mpesa_wallet_details(self):
+        self.user_phone = self.user_data_store.get("user_phone")["user_phone"] if self.user_data_store.exists("user_phone") else ""
         kes_wallet_balance = self.get_mpesa_balance()
         usd_wallet_balance = 0
         rate = self.get_kes_to_usd_rate()
@@ -549,10 +551,10 @@ class MpesaMessageParser:
             return filtered
 
         tx_data = filter_transactions_by_type(self.formatted_transactions, csv_type)
-        filename = f"pft_{csv_type}_transactions_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        filename = f"pft_{csv_type}_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
 
         if platform == "android":
-            from android.storage import primary_external_storage_path # type: ignore
+            from android.storage import primary_external_storage_path
             export_dir = os.path.join(primary_external_storage_path(), "Download")
         else:
             export_dir = os.path.expanduser("~/Downloads")
@@ -565,8 +567,7 @@ class MpesaMessageParser:
                 writer = csv.writer(file)
                 writer.writerow(["Date", "Time", "Sender", "Receiver", "Category", "Amount", "Transaction Fee", "Transaction ID"])
 
-                if not tx_data:
-                    writer.writerow(["N/A", "N/A", "N/A", "N/A", "N/A", "N/A", "N/A", "N/A"])
+                if not tx_data: writer.writerow(["N/A", "N/A", "N/A", "N/A", "N/A", "N/A", "N/A", "N/A"])
                 else:
                     for tx in tx_data:
                         dt_str = tx.get("t_time", "")
@@ -578,10 +579,10 @@ class MpesaMessageParser:
                             date_part.strip(),
                             time_part.strip(),
                             tx.get("sender_acc", "").replace("\n", " | "),
-                            f"\t{tx.get("receiver_acc", "")}",
+                            f"\t{tx.get('receiver_acc', '')}",
                             tx.get("t_category", ""),
-                            tx.get("amount", ""),
-                            tx.get("t_fee", ""),
+                            tx.get("amount", "").split()[1],
+                            tx.get("t_fee", "").split()[1],
                             tx.get("t_id", "")
                         ])
 

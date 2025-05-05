@@ -680,7 +680,7 @@ Builder.load_string(KV)
 
 class WalletSetupScreen(MDScreen):
     network_menu, wallet_menu, crypto_help_dialog = None, None, None
-    def __init__(self, store=None, firebase=None, uid=None, id_token=None, show_snackbar=None, hide_card=None, card_to_show_or_hide=None, *args, **kwargs):
+    def __init__(self, store=None, firebase=None, show_snackbar=None, hide_card=None, card_to_show_or_hide=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._green, self._blue = "#2fc46c", "#005eff"
 
@@ -692,17 +692,20 @@ class WalletSetupScreen(MDScreen):
         self.wallet_requires_api = {"Binance": True, "Bybit": True, "MetaMask": False}
         self.user_data_store = store
         self.firebase = firebase
-        self.u_id = uid
-        self.id_token = id_token
+        self.id_token =  None
+        self.u_id = None
         self.show_snackbar = show_snackbar
         self.hide_card = hide_card
         self.card_to_show_or_hide = card_to_show_or_hide
 
     def on_enter(self, *args):
+        self.id_token = self.user_data_store.get("credentials")["id_token"] if self.user_data_store.exists("credentials") else None
+        self.u_id = self.user_data_store.get("credentials")["uid"] if self.user_data_store.exists("credentials") else None
         if self.user_data_store.exists("mpesa_acc_was_added"):
             if self.user_data_store.get("mpesa_acc_was_added")["status"]:
                 self.ids.acc_exists.opacity = 1
                 self.ids.acc_exists_not.opacity = 0
+                self.ids.mpesa_phone_number.disabled = True
 
     def get_next_account_key(self, existing_data: dict | None) -> str:
         numbers = []
@@ -714,59 +717,73 @@ class WalletSetupScreen(MDScreen):
         return f"account_{max(numbers) + 1 if numbers else 1}"
 
     # methods for handling mpesa stuff...
-    def fetch_mpesa_messages(self):
+    def fetch_mpesa_messages(self, silent=False):
         phone = self.ids.mpesa_phone_number.text
-        if len(phone) != 10: self.show_snackbar("Phone number MUST be 10 digits...")
+        if phone and len(phone) != 10 and self.manager.current == "wallet_setup_screen":
+            self.show_snackbar("Phone number MUST be 10 digits...")
         else:
             if platform == "android":
-                from android.permissions import request_permissions, Permission # type: ignore
+                from android.permissions import request_permissions, Permission
                 request_permissions(
                     [Permission.READ_SMS, Permission.RECEIVE_SMS],
-                    self.on_permissions_granted
+                    lambda permissions, grants: self.on_permissions_granted(permissions, grants, silent)
                 )
 
-    def on_permissions_granted(self, permissions, grants):
+    def on_permissions_granted(self, permissions, grants, silent):
         if all(grants):
-            Clock.schedule_once(lambda dt: self.show_snackbar("Fetching MPESA messages...", background=self._green), 0.3)
-            Clock.schedule_once(lambda dt: self.load_mpesa_messages(), 1)
-            Clock.schedule_once(lambda dt: self.update_link_mpesa_card_content(), 3)
+            if not silent:
+                Clock.schedule_once(lambda dt: self.show_snackbar("Parsing your data...", background=self._green), 0.3)
+            Clock.schedule_once(lambda dt: self.load_mpesa_messages(silent), 1)
         else:
-            Clock.schedule_once(lambda dt: self.show_snackbar("Permissions denied. Cannot fetch MPESA messages..."), 0.3)
-            Clock.schedule_once(lambda dt: self.update_link_mpesa_card_content(), 3)
+            if not silent:
+                Clock.schedule_once(lambda dt: self.show_snackbar("Permissions denied. Cannot fetch MPESA messages..."), 0.3)
 
-    def load_mpesa_messages(self):
+    def load_mpesa_messages(self, silent):
+        self.id_token = self.user_data_store.get("credentials")["id_token"] if self.user_data_store.exists("credentials") else None
+        self.u_id = self.user_data_store.get("credentials")["uid"] if self.user_data_store.exists("credentials") else None
         messages = self.read_sms_from_sender("MPESA")
         phone = self.ids.mpesa_phone_number.text
 
         if messages:
-            existing_raw_data = self.firebase.get_data(
-                id_token=self.id_token,
-                path=f"users/{self.u_id}/raw_data"
-            )
-
+            app = App.get_running_app()
+            if not all([self.firebase, self.id_token, self.u_id]): return
+            try:
+                existing_raw_data = self.firebase.get_data(
+                    id_token=self.id_token,
+                    path=f"users/{self.u_id}/raw_data"
+                )
+            except Exception: existing_raw_data = {}
             next_key = self.get_next_account_key(existing_raw_data)
 
-            self.firebase.put_data(
-                id_token=self.id_token,
-                path=f"users/{self.u_id}/raw_data/{next_key}",
-                data={
-                    "Account Type": "M-PESA",
-                    "Account ID": phone,
-                    "Transactions": messages
-                }
-            )
+            try:
+                self.firebase.put_data(
+                    id_token=self.id_token,
+                    path=f"users/{self.u_id}/raw_data/{next_key}",
+                    data={
+                        "Account Type": "M-PESA",
+                        "Account ID": phone,
+                        "Transactions": messages
+                    }
+                )
+            except Exception:
+                if not silent: self.show_snackbar("Failed to sync data.")
 
             self.user_data_store.put("acc_was_added", status=True)
-            full_name = self.firebase.get_data(id_token=self.id_token, path=f"users/{self.u_id}/user_profile")["Full name"]
-            App.get_running_app().load_user_data(id_token=self.id_token, uid=self.u_id, full_name=full_name)
 
-        else: Clock.schedule_once(lambda dt: self.show_snackbar("No MPESA messages found."), 0.3)
+            if not silent:
+                try: full_name = self.firebase.get_data(id_token=self.id_token, path=f"users/{self.u_id}/user_profile")["Full name"]
+                except Exception: self.show_snackbar("Failed to fetch profile info.")
+                app.load_user_data(id_token=self.id_token, uid=self.u_id, full_name=full_name)
+                self.update_link_mpesa_card_content()
+        else:
+            if not silent: Clock.schedule_once(lambda dt: self.show_snackbar("No MPESA messages found."), 0.3)
         self.ids.mpesa_phone_number.text = ""
 
     def update_link_mpesa_card_content(self):
         self.hide_card(self.card_to_show_or_hide("add_mpesa_acc_card"))
         self.ids.acc_exists.opacity = 1
         self.ids.acc_exists_not.opacity = 0
+        self.ids.mpesa_phone_number.disabled = True
         self.manager.current = "home_screen"
         self.user_data_store.put("mpesa_acc_was_added", status=True)
 
